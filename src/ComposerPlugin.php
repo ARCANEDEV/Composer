@@ -265,35 +265,20 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         $this->mergeRequires($root, $package);
         $this->mergeDevRequires($root, $package);
         $this->mergeAutoload($root, $package, $path);
+        $this->mergeSuggests($root, $package);
 
         if (isset($json['repositories'])) {
-            $this->addRepositories($json['repositories'], $root);
+            $this->addRepositories($root, $json['repositories']);
         }
 
-        if ($package->getSuggests()) {
-            $root->setSuggests(array_merge(
-                $root->getSuggests(),
-                $package->getSuggests()
-            ));
-        }
-
-        if (
-            $this->recurse &&
-            isset($json['extra'][self::PLUGIN_KEY])
-        ) {
-            $this->mergePackages($json['extra'][self::PLUGIN_KEY]);
-        }
+        $this->addExtras($json);
     }
 
     /**
      * Read the contents of a composer.json style file into an array.
      *
-     * The package contents are fixed up to be usable to create a Package
-     * object by providing dummy "name" and "version" values if they have not
-     * been provided in the file. This is consistent with the default root
-     * package loading behavior of Composer.
+     * @param  string $path
      *
-     * @param string $path
      * @return array
      */
     protected function readPackageJson($path)
@@ -302,7 +287,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         $json = $file->read();
 
         if ( ! isset($json['name'])) {
-            $json['name'] = 'merge-plugin/' . strtr($path, DIRECTORY_SEPARATOR, '-');
+            $json['name'] = self::PLUGIN_KEY . '/' . strtr($path, DIRECTORY_SEPARATOR, '-');
         }
 
         if ( ! isset($json['version'])) {
@@ -384,6 +369,33 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
+     * Merge package suggests
+     *
+     * @param RootPackage     $root
+     * @param CompletePackage $package
+     */
+    protected function mergeSuggests(RootPackage $root, CompletePackage $package)
+    {
+        if ($package->getSuggests()) {
+            $root->setSuggests(
+                array_merge($root->getSuggests(), $package->getSuggests())
+            );
+        }
+    }
+
+    /**
+     * Add package extras
+     *
+     * @param array $json
+     */
+    protected function addExtras(array $json)
+    {
+        if ($this->recurse && isset($json['extra'][self::PLUGIN_KEY])) {
+            $this->mergePackages($json['extra'][self::PLUGIN_KEY]);
+        }
+    }
+
+    /**
      * Extract and merge stability flags from the given collection of requires.
      *
      * @param RootPackage $root
@@ -408,10 +420,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * Add a collection of repositories described by the given configuration
      * to the given package and the global repository manager.
      *
-     * @param array       $repositories
      * @param RootPackage $root
+     * @param array       $repositories
      */
-    protected function addRepositories(array $repositories, RootPackage $root)
+    protected function addRepositories(RootPackage $root, array $repositories)
     {
         $repoManager = $this->composer->getRepositoryManager();
         $newRepos    = [];
@@ -430,10 +442,9 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             $newRepos[] = $repo;
         }
 
-        $root->setRepositories(array_merge(
-            $newRepos,
-            $root->getRepositories()
-        ));
+        $root->setRepositories(
+            array_merge($newRepos, $root->getRepositories())
+        );
     }
 
     /**
