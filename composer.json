@@ -5,10 +5,10 @@
     "license": "MIT",
     "require": {
         "php": ">=5.4.0",
-        "composer-plugin-api": "^1.0",
-        "composer/composer": "1.0.*@dev"
+        "composer-plugin-api": "^1.0"
     },
     "require-dev": {
+        "composer/composer": "1.0.*@dev",
         "phpunit/phpunit": "~4.7",
         "phpunit/phpcov": "~2.0"
     },
