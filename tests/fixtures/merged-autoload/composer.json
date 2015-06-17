@@ -1,0 +1,12 @@
+{
+    "autoload": {
+        "psr-4": {
+            "Arcanedev\\": "arcanedev/"
+        }
+    },
+    "extra": {
+        "merge-plugin": {
+            "include": "modules/*/composer.json"
+        }
+    }
+}

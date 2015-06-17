@@ -1,0 +1,14 @@
+{
+    "autoload": {
+        "psr-4": {
+            "Arcanedev\\Package\\": [ "package/", "libs/" ],
+            "Arcanedev\\Module\\": "module/"
+        },
+        "psr-0": {
+            "UniqueGlobalClass": "",
+            "": "fallback/"
+        },
+        "files" : ["helpers.php"],
+        "classmap": ["init.php", "includes/"]
+    }
+}
