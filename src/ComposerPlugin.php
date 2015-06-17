@@ -256,13 +256,11 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
 
             return;
         }
-        else {
-            $this->loadedFiles[] = $path;
-        }
 
         $this->debug("Loading <comment>{$path}</comment>...");
-        $json       = $this->readPackageJson($path);
-        $package    = $this->jsonToPackage($json);
+        $this->loadedFiles[] = $path;
+        $json                = $this->readPackageJson($path);
+        $package             = $this->jsonToPackage($json);
 
         $this->mergeRequires($root, $package);
         $this->mergeDevRequires($root, $package);
