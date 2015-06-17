@@ -266,11 +266,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         $this->mergeDevRequires($root, $package);
         $this->mergeAutoload($root, $package, $path);
         $this->mergeSuggests($root, $package);
-
-        if (isset($json['repositories'])) {
-            $this->addRepositories($root, $json['repositories']);
-        }
-
+        $this->addRepositories($root, $json);
         $this->addExtras($json);
     }
 
@@ -421,14 +417,18 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * to the given package and the global repository manager.
      *
      * @param RootPackage $root
-     * @param array       $repositories
+     * @param array       $json
      */
-    protected function addRepositories(RootPackage $root, array $repositories)
+    protected function addRepositories(RootPackage $root, array $json)
     {
+        if ( ! isset($json['repositories'])) {
+            return;
+        }
+
         $repoManager = $this->composer->getRepositoryManager();
         $newRepos    = [];
 
-        foreach ($repositories as $repoJson) {
+        foreach ($json['repositories'] as $repoJson) {
             if ( ! isset($repoJson['type'])) {
                 continue;
             }
