@@ -303,7 +303,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     private function mergeRequires(RootPackage $root, CompletePackage $package)
     {
         $requires = $package->getRequires();
-        
+
         if (empty($requires)) {
             return;
         }
@@ -325,7 +325,9 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function mergeDevRequires(RootPackage $root, CompletePackage $package)
     {
-        if (empty($requires = $package->getDevRequires())) {
+        $requires = $package->getDevRequires();
+
+        if (empty($requires)) {
             return;
         }
 
