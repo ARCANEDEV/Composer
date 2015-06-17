@@ -125,10 +125,6 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         ];
     }
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Other Functions
-     | ------------------------------------------------------------------------------------------------
-     */
     public function onInstall(Event $event)
     {
         $this->onInstallOrUpdateOrDump($event);
@@ -199,12 +195,16 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         }
     }
 
+    /* ------------------------------------------------------------------------------------------------
+     |  Other Functions
+     | ------------------------------------------------------------------------------------------------
+     */
     /**
      * @param  RootPackage $package
      *
      * @return array
      */
-    protected function readConfig(RootPackage $package)
+    private function readConfig(RootPackage $package)
     {
         $config = [
             'include' => [],
@@ -216,7 +216,9 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             $config = array_merge($config, $extra[self::PLUGIN_KEY]);
 
             if ( ! is_array($config['include'])) {
-                $config['include'] = [$config['include']];
+                $config['include'] = [
+                    $config['include']
+                ];
             }
         }
 
@@ -229,9 +231,8 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      *
      * @param array $config
      */
-    protected function mergePackages(array $config)
+    private function mergePackages(array $config)
     {
-        $root   = $this->getRootPackage();
         $paths  = array_reduce(
             array_map('glob', $config['include']),
             'array_merge',
@@ -239,7 +240,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         );
 
         foreach ($paths as $path) {
-            $this->loadFile($root, $path);
+            $this->loadFile($this->getRootPackage(), $path);
         }
     }
 
@@ -249,7 +250,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * @param RootPackage $root
      * @param string $path
      */
-    protected function loadFile($root, $path)
+    private function loadFile($root, $path)
     {
         if (in_array($path, $this->loadedFiles)) {
             $this->debug("Skipping duplicate <comment>$path</comment>...");
@@ -277,7 +278,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      *
      * @return array
      */
-    protected function readPackageJson($path)
+    private function readPackageJson($path)
     {
         $file = new JsonFile($path);
         $json = $file->read();
@@ -299,11 +300,9 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * @param RootPackage     $root
      * @param CompletePackage $package
      */
-    protected function mergeRequires(RootPackage $root, CompletePackage $package)
+    private function mergeRequires(RootPackage $root, CompletePackage $package)
     {
-        $requires = $package->getRequires();
-
-        if (empty($requires)) {
+        if (empty($requires = $package->getRequires())) {
             return;
         }
 
@@ -322,11 +321,9 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * @param RootPackage     $root
      * @param CompletePackage $package
      */
-    protected function mergeDevRequires(RootPackage $root, CompletePackage $package)
+    private function mergeDevRequires(RootPackage $root, CompletePackage $package)
     {
-        $requires = $package->getDevRequires();
-
-        if (empty($requires)) {
+        if (empty($requires = $package->getDevRequires())) {
             return;
         }
 
@@ -340,64 +337,12 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * @param RootPackage     $root
-     * @param CompletePackage $package
-     * @param string          $path
-     */
-    protected function mergeAutoload(RootPackage $root, CompletePackage $package, $path)
-    {
-        $autoload = $package->getAutoload();
-
-        if (empty($autoload)) {
-            return;
-        }
-
-        $packagePath = substr($path, 0, strrpos($path, '/') + 1);
-
-        array_walk_recursive($autoload, function(&$path) use ($packagePath) {
-            $path = $packagePath . $path;
-        });
-
-        $root->setAutoload(array_merge_recursive(
-            $root->getAutoload(),
-            $autoload
-        ));
-    }
-
-    /**
-     * Merge package suggests
-     *
-     * @param RootPackage     $root
-     * @param CompletePackage $package
-     */
-    protected function mergeSuggests(RootPackage $root, CompletePackage $package)
-    {
-        if ($package->getSuggests()) {
-            $root->setSuggests(
-                array_merge($root->getSuggests(), $package->getSuggests())
-            );
-        }
-    }
-
-    /**
-     * Add package extras
-     *
-     * @param array $json
-     */
-    protected function addExtras(array $json)
-    {
-        if ($this->recurse && isset($json['extra'][self::PLUGIN_KEY])) {
-            $this->mergePackages($json['extra'][self::PLUGIN_KEY]);
-        }
-    }
-
-    /**
      * Extract and merge stability flags from the given collection of requires.
      *
      * @param RootPackage $root
      * @param array       $requires
      */
-    protected function mergeStabilityFlags(RootPackage $root, array $requires)
+    private function mergeStabilityFlags(RootPackage $root, array $requires)
     {
         $flags = $root->getStabilityFlags();
 
@@ -413,13 +358,64 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
+     * @param RootPackage     $root
+     * @param CompletePackage $package
+     * @param string          $path
+     */
+    private function mergeAutoload(RootPackage $root, CompletePackage $package, $path)
+    {
+        $autoload = $package->getAutoload();
+
+        if (empty($autoload)) {
+            return;
+        }
+
+        $packagePath = substr($path, 0, strrpos($path, '/') + 1);
+
+        array_walk_recursive($autoload, function(&$path) use ($packagePath) {
+            $path = $packagePath . $path;
+        });
+
+        $root->setAutoload(
+            array_merge_recursive($root->getAutoload(), $autoload)
+        );
+    }
+
+    /**
+     * Merge package suggests
+     *
+     * @param RootPackage     $root
+     * @param CompletePackage $package
+     */
+    private function mergeSuggests(RootPackage $root, CompletePackage $package)
+    {
+        if ($package->getSuggests()) {
+            $root->setSuggests(
+                array_merge($root->getSuggests(), $package->getSuggests())
+            );
+        }
+    }
+
+    /**
+     * Add package extras
+     *
+     * @param array $json
+     */
+    private function addExtras(array $json)
+    {
+        if ($this->recurse && isset($json['extra'][self::PLUGIN_KEY])) {
+            $this->mergePackages($json['extra'][self::PLUGIN_KEY]);
+        }
+    }
+
+    /**
      * Add a collection of repositories described by the given configuration
      * to the given package and the global repository manager.
      *
      * @param RootPackage $root
      * @param array       $json
      */
-    protected function addRepositories(RootPackage $root, array $json)
+    private function addRepositories(RootPackage $root, array $json)
     {
         if ( ! isset($json['repositories'])) {
             return;
@@ -457,7 +453,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      *
      * @return array
      */
-    protected function mergeLinks(array $origin, array $merge, array &$dups)
+    private function mergeLinks(array $origin, array $merge, array &$dups)
     {
         /** @var \Composer\Package\Link $link */
         foreach ($merge as $name => $link) {
@@ -476,11 +472,13 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
+     * Convert the json array to package object
+     *
      * @param  $json
      *
      * @return CompletePackage
      */
-    protected function jsonToPackage($json)
+    private function jsonToPackage($json)
     {
         $package = $this->loader->load($json);
 
@@ -501,7 +499,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      *
      * @param string $message
      */
-    protected function debug($message)
+    private function debug($message)
     {
         if ($this->inputOutput->isVerbose()) {
             $message = "  <info>[merge]</info> {$message}";
