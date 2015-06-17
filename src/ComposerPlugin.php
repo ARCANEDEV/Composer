@@ -425,26 +425,37 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             return;
         }
 
-        $repoManager = $this->composer->getRepositoryManager();
-        $newRepos    = [];
+        $repoManager     = $this->composer->getRepositoryManager();
 
-        foreach ($json['repositories'] as $repoJson) {
-            if ( ! isset($repoJson['type'])) {
-                continue;
-            }
+        $newRepositories = array_map(function($repoJson) use ($repoManager) {
+            return $this->createRepository($repoManager, $repoJson);
+        }, $json['repositories']);
 
-            $this->debug("Adding {$repoJson['type']} repository");
-            $repo = $repoManager->createRepository(
-                $repoJson['type'],
-                $repoJson
-            );
-            $repoManager->addRepository($repo);
-            $newRepos[] = $repo;
+        $root->setRepositories(array_merge(
+            array_filter($newRepositories),
+            $root->getRepositories()
+        ));
+    }
+
+    /**
+     * @param  \Composer\Repository\RepositoryManager $repoManager
+     * @param  array                                  $json
+     *
+     * @return \Composer\Repository\RepositoryInterface
+     */
+    private function createRepository(
+        \Composer\Repository\RepositoryManager &$repoManager,
+        array $json
+    ) {
+        if ( ! isset($json['type'])) {
+            return null;
         }
 
-        $root->setRepositories(
-            array_merge($newRepos, $root->getRepositories())
-        );
+        $this->debug("Adding {$json['type']} repository");
+        $repo = $repoManager->createRepository($json['type'], $json);
+        $repoManager->addRepository($repo);
+
+        return $repo;
     }
 
     /**
