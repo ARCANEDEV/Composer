@@ -13,6 +13,7 @@ use Composer\Package\Loader\ArrayLoader;
 use Composer\Package\RootPackage;
 use Composer\Package\Version\VersionParser;
 use Composer\Plugin\PluginInterface;
+use Composer\Repository\RepositoryManager;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use UnexpectedValueException;
@@ -248,7 +249,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * Read a JSON file and merge its contents
      *
      * @param RootPackage $root
-     * @param string $path
+     * @param string      $path
      */
     private function loadFile($root, $path)
     {
@@ -266,6 +267,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         $this->mergeRequires($root, $package);
         $this->mergeDevRequires($root, $package);
         $this->mergeAutoload($root, $package, $path);
+        $this->mergeDevAutoload($root, $package, $path);
         $this->mergeSuggests($root, $package);
         $this->addRepositories($root, $json);
         $this->addExtras($json);
@@ -362,6 +364,8 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
+     * Merge autoload
+     *
      * @param RootPackage     $root
      * @param CompletePackage $package
      * @param string          $path
@@ -382,6 +386,32 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
 
         $root->setAutoload(
             array_merge_recursive($root->getAutoload(), $autoload)
+        );
+    }
+
+    /**
+     * Merge dev autoload
+     *
+     * @param RootPackage     $root
+     * @param CompletePackage $package
+     * @param string          $path
+     */
+    private function mergeDevAutoload(RootPackage $root, CompletePackage $package, $path)
+    {
+        $devAutoload = $package->getDevAutoload();
+
+        if (empty($devAutoload)) {
+            return;
+        }
+
+        $packagePath = substr($path, 0, strrpos($path, '/') + 1);
+
+        array_walk_recursive($devAutoload, function(&$path) use ($packagePath) {
+            $path = $packagePath . $path;
+        });
+
+        $root->setDevAutoload(
+            array_merge_recursive($root->getAutoload(), $devAutoload)
         );
     }
 
@@ -438,15 +468,15 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * @param  \Composer\Repository\RepositoryManager $repoManager
-     * @param  array                                  $json
+     * Create repository
+     *
+     * @param  RepositoryManager $repoManager
+     * @param  array             $json
      *
      * @return \Composer\Repository\RepositoryInterface
      */
-    private function createRepository(
-        \Composer\Repository\RepositoryManager &$repoManager,
-        array $json
-    ) {
+    private function createRepository(RepositoryManager &$repoManager, array $json)
+    {
         if ( ! isset($json['type'])) {
             return null;
         }
@@ -489,7 +519,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Convert the json array to package object
      *
-     * @param  $json
+     * @param  array $json
      *
      * @return CompletePackage
      */
@@ -509,8 +539,8 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Log a debug message
      *
-     * Messages will be output at the "verbose" logging level (eg `-v` needed
-     * on the Composer command).
+     * Messages will be output at the "verbose" logging level
+     * (eg `-v` needed on the Composer command).
      *
      * @param string $message
      */
