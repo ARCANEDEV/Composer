@@ -411,7 +411,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         });
 
         $root->setDevAutoload(
-            array_merge_recursive($root->getAutoload(), $devAutoload)
+            array_merge_recursive($root->getDevAutoload(), $devAutoload)
         );
     }
 
