@@ -10,7 +10,8 @@
     "require-dev": {
         "composer/composer": "1.0.*@dev",
         "phpunit/phpunit": "~4.7",
-        "phpunit/phpcov": "~2.0"
+        "phpunit/phpcov": "~2.0",
+        "phpspec/prophecy-phpunit": "~1.1"
     },
     "autoload": {
         "psr-4": {

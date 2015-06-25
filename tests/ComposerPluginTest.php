@@ -2,14 +2,21 @@
 
 use Arcanedev\Composer\ComposerPlugin;
 use Composer\Composer;
+use Composer\DependencyResolver\Operation\InstallOperation;
 use Composer\Installer\InstallerEvent;
 use Composer\Installer\InstallerEvents;
+use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
+use Composer\Package\Package;
 use Composer\Package\RootPackage;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Prophecy\Argument;
 
+/**
+ * Class ComposerPluginTest
+ * @package Arcanedev\Composer\Tests
+ */
 class ComposerPluginTest extends TestCase
 {
     /* ------------------------------------------------------------------------------------------------
@@ -67,9 +74,12 @@ class ComposerPluginTest extends TestCase
             ScriptEvents::PRE_UPDATE_CMD,
             ScriptEvents::PRE_AUTOLOAD_DUMP,
             InstallerEvents::PRE_DEPENDENCIES_SOLVING,
+            PackageEvents::POST_PACKAGE_INSTALL,
+            ScriptEvents::POST_INSTALL_CMD,
+            ScriptEvents::POST_UPDATE_CMD,
         ];
 
-        $this->assertEquals(4, count($subscriptions));
+        $this->assertEquals(7, count($subscriptions));
 
 
         foreach ($events as $event) {
@@ -313,6 +323,21 @@ class ComposerPluginTest extends TestCase
         $this->assertEquals(0, count($extraInstalls));
     }
 
+    /**
+     * @test
+     * @dataProvider provideOnPostPackageInstall
+     */
+    public function it_can_merge_on_post_package_install($package, $first)
+    {
+        $operation = new InstallOperation(
+            new Package($package, '1.2.3.4', '1.2.3')
+        );
+        $event = $this->prophesize('Composer\\Installer\\PackageEvent');
+        $event->getOperation()->willReturn($operation)->shouldBeCalled();
+        $this->plugin->onPostPackageInstall($event->reveal());
+        $this->assertEquals($first, $this->plugin->isFirstInstall());
+    }
+
     /* ------------------------------------------------------------------------------------------------
      |  Other Functions
      | ------------------------------------------------------------------------------------------------
@@ -337,7 +362,7 @@ class ComposerPluginTest extends TestCase
             [],
             []
         );
-        $this->plugin->onInstallOrUpdateOrDump($event);
+        $this->plugin->onInstallOrUpdate($event);
         $requestInstalls = [];
 
         $request = $this->prophesize('Composer\\DependencyResolver\\Request');
@@ -350,7 +375,7 @@ class ComposerPluginTest extends TestCase
             InstallerEvents::PRE_DEPENDENCIES_SOLVING,
             $this->composer->reveal(),
             $this->io->reveal(),
-            true, //dev mode
+            true, // dev mode
             $this->prophesize('Composer\DependencyResolver\PolicyInterface')->reveal(),
             $this->prophesize('Composer\DependencyResolver\Pool')->reveal(),
             $this->prophesize('Composer\Repository\CompositeRepository')->reveal(),
@@ -361,5 +386,18 @@ class ComposerPluginTest extends TestCase
         $this->plugin->onDependencySolve($event);
 
         return $requestInstalls;
+    }
+
+    /**
+     * Provide data onPostPackageInstall
+     *
+     * @return array
+     */
+    public function provideOnPostPackageInstall()
+    {
+        return [
+            [ComposerPlugin::PACKAGE_NAME, true],
+            ['foo/bar', false],
+        ];
     }
 }

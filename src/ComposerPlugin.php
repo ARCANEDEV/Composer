@@ -3,8 +3,12 @@
 use Composer\Composer;
 use Composer\Config;
 use Composer\EventDispatcher\EventSubscriberInterface;
+use Composer\Factory;
+use Composer\Installer;
 use Composer\Installer\InstallerEvent;
 use Composer\Installer\InstallerEvents;
+use Composer\Installer\PackageEvent;
+use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
 use Composer\Json\JsonFile;
 use Composer\Package\BasePackage;
@@ -27,6 +31,14 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /* ------------------------------------------------------------------------------------------------
      |  Constants
      | ------------------------------------------------------------------------------------------------
+     */
+    /**
+     * Package name
+     */
+    const PACKAGE_NAME = 'arcanedev/composer';
+
+    /**
+     * Plugin key
      */
     const PLUGIN_KEY = 'merge-plugin';
 
@@ -55,9 +67,11 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     protected $duplicateLinks;
 
     /**
+     * Dev mode
+     *
      * @var bool $devMode
      */
-    protected $devMode;
+    protected $devMode = false;
 
     /**
      * Whether to recursively include dependencies
@@ -73,6 +87,13 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     protected $loadedFiles = [];
 
+    /**
+     * Plugin first install
+     *
+     * @var bool $pluginFirstInstall
+     */
+    protected $pluginFirstInstall = false;
+
     /* ------------------------------------------------------------------------------------------------
      |  Getters & Setters
      | ------------------------------------------------------------------------------------------------
@@ -86,13 +107,23 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     {
         $root = $this->composer->getPackage();
 
-        if ( ! $root instanceof RootPackage) {
-            throw new UnexpectedValueException(
-                'Expected instance of RootPackage, got ' . get_class($root)
-            );
+        if ($root instanceof RootPackage) {
+            return $root;
         }
 
-        return $root;
+        throw new UnexpectedValueException(
+            'Expected instance of Composer\\Package\\RootPackage, got ' . get_class($root)
+        );
+    }
+
+    /**
+     * Is this the first time that the plugin has been installed?
+     *
+     * @return bool
+     */
+    public function isFirstInstall()
+    {
+        return $this->pluginFirstInstall;
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -107,8 +138,9 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     public function activate(Composer $composer, IOInterface $io)
     {
-        $this->composer    = $composer;
-        $this->inputOutput = $io;
+        $this->composer           = $composer;
+        $this->inputOutput        = $io;
+        $this->pluginFirstInstall = false;
     }
 
     /**
@@ -119,26 +151,14 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            ScriptEvents::PRE_INSTALL_CMD               => 'onInstall',
-            ScriptEvents::PRE_UPDATE_CMD                => 'onUpdate',
-            ScriptEvents::PRE_AUTOLOAD_DUMP             => 'onAutoloadDump',
-            InstallerEvents::PRE_DEPENDENCIES_SOLVING   => 'onDependencySolve',
+            ScriptEvents::PRE_INSTALL_CMD             => 'onInstallOrUpdate',
+            ScriptEvents::PRE_UPDATE_CMD              => 'onInstallOrUpdate',
+            ScriptEvents::PRE_AUTOLOAD_DUMP           => 'onInstallOrUpdate',
+            InstallerEvents::PRE_DEPENDENCIES_SOLVING => 'onDependencySolve',
+            PackageEvents::POST_PACKAGE_INSTALL       => 'onPostPackageInstall',
+            ScriptEvents::POST_INSTALL_CMD            => 'onPostInstallOrUpdate',
+            ScriptEvents::POST_UPDATE_CMD             => 'onPostInstallOrUpdate',
         ];
-    }
-
-    public function onInstall(Event $event)
-    {
-        $this->onInstallOrUpdateOrDump($event);
-    }
-
-    public function onUpdate(Event $event)
-    {
-        $this->onInstallOrUpdateOrDump($event);
-    }
-
-    public function onAutoloadDump(Event $event)
-    {
-        $this->onInstallOrUpdateOrDump($event);
     }
 
     /**
@@ -177,7 +197,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      *
      * @param Event $event
      */
-    public function onInstallOrUpdateOrDump(Event $event)
+    public function onInstallOrUpdate(Event $event)
     {
         $config = $this->readConfig($this->getRootPackage());
 
@@ -196,11 +216,62 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         }
     }
 
+    /**
+     * Handle an event callback following installation of a new package by
+     * checking to see if the package that was installed was our plugin.
+     *
+     * @param PackageEvent $event
+     */
+    public function onPostPackageInstall(PackageEvent $event)
+    {
+        $package = $event->getOperation()->getPackage()->getName();
+
+        if ($package === self::PACKAGE_NAME) {
+            $this->debug(self::PLUGIN_KEY . ' installed');
+            $this->pluginFirstInstall = true;
+        }
+    }
+
+    /**
+     * Handle an event callback following an install or update command. If our
+     * plugin was installed during the run then trigger an update command to
+     * process any merge-patterns in the current config.
+     *
+     * @param Event $event
+     */
+    public function onPostInstallOrUpdate(Event $event)
+    {
+        if ( ! $this->isFirstInstall()) {
+            return;
+        }
+
+        $this->pluginFirstInstall = false;
+        $this->debug(
+            '<comment>Running additional update to apply merge settings</comment>'
+        );
+
+        $installer = Installer::create(
+            $event->getIO(),
+            // Create a new Composer instance to ensure full processing of the merged files.
+            Factory::create($event->getIO(), null, false)
+        );
+
+        // Force update mode so that new packages are processed rather than just telling the
+        // user that composer.json and composer.lock don't match.
+        $installer->setUpdate(true);
+        $installer->setDevMode($event->isDevMode());
+        // TODO: can we set more flags to match the current run?
+
+        $installer->run();
+    }
+
     /* ------------------------------------------------------------------------------------------------
      |  Other Functions
      | ------------------------------------------------------------------------------------------------
      */
     /**
+     * Read Config
+     *
      * @param  RootPackage $package
      *
      * @return array
@@ -456,7 +527,6 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         }
 
         $repoManager     = $this->composer->getRepositoryManager();
-
         $newRepositories = array_map(function($repoJson) use ($repoManager) {
             return $this->createRepository($repoManager, $repoJson);
         }, $json['repositories']);
@@ -553,7 +623,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
                 $this->inputOutput->writeError($message);
             }
             else {
-                // Backwards compatiblity for Composer before cb336a5
+                // Backwards compatibility for Composer before cb336a5
                 $this->inputOutput->write($message);
             }
         }
