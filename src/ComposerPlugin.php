@@ -11,6 +11,7 @@ use Composer\Installer\PackageEvent;
 use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
 use Composer\Json\JsonFile;
+use Composer\Package\AliasPackage;
 use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
 use Composer\Package\Loader\ArrayLoader;
@@ -106,6 +107,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     protected function getRootPackage()
     {
         $root = $this->composer->getPackage();
+
+        if ($root instanceof AliasPackage) {
+            $root = $root->getAliasOf();
+        }
 
         if ($root instanceof RootPackage) {
             return $root;
@@ -322,10 +327,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * @param RootPackage $root
      * @param string      $path
      */
-    private function loadFile($root, $path)
+    private function loadFile(RootPackage $root, $path)
     {
         if (in_array($path, $this->loadedFiles)) {
-            $this->debug("Skipping duplicate <comment>$path</comment>...");
+            $this->debug("Skipping duplicate <comment>{$path}</comment>...");
 
             return;
         }

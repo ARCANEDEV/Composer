@@ -12,6 +12,7 @@ use Composer\Package\RootPackage;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Prophecy\Argument;
+use ReflectionMethod;
 
 /**
  * Class ComposerPluginTest
@@ -336,6 +337,59 @@ class ComposerPluginTest extends TestCase
         $event->getOperation()->willReturn($operation)->shouldBeCalled();
         $this->plugin->onPostPackageInstall($event->reveal());
         $this->assertEquals($first, $this->plugin->isFirstInstall());
+    }
+
+    /**
+     * @test
+     *
+     * Given a root package with a branch alias
+     * When the plugin is run
+     * Then the root package will be unwrapped from the alias.
+     */
+    public function test_has_branch_alias()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('has-branch-alias');
+
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setRequires(Argument::type('array'))
+             ->will(function ($args) use ($that) {
+                 $requires = $args[0];
+                 $that->assertEquals(2, count($requires));
+                 $that->assertArrayHasKey('arcanedev/composer', $requires);
+                 $that->assertArrayHasKey('php', $requires);
+             });
+
+        $root = $root->reveal();
+
+        $that->assertEquals([
+            "arcanedev/composer" => "dev-master"
+        ], $root->getRequires());
+
+        $that->assertEquals([
+            "merge-plugin" => [
+                "include"   => [
+                    "composer.local.json"
+                ]
+            ],
+            "branch-alias" => [
+                "dev-master" => "5.0.x-dev"
+            ]
+        ], $root->getExtra());
+
+        $alias = $this->prophesize('Composer\Package\RootAliasPackage');
+        $alias->getAliasOf()->willReturn($root)->shouldBeCalled();
+
+        $this->triggerPlugin($alias->reveal(), $dir);
+
+        $getRootPackage = new ReflectionMethod(
+            get_class($this->plugin),
+            'getRootPackage'
+        );
+        $getRootPackage->setAccessible(true);
+
+        $this->assertEquals($root, $getRootPackage->invoke($this->plugin));
     }
 
     /* ------------------------------------------------------------------------------------------------
