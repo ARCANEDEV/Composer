@@ -2,6 +2,7 @@
 
 use Composer\Composer;
 use Composer\Config;
+use Composer\DependencyResolver\Operation\InstallOperation;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Factory;
 use Composer\Installer;
@@ -89,11 +90,25 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     protected $loadedFiles = [];
 
     /**
-     * Plugin first install
+     * Is this the first time that our plugin has been installed?
      *
      * @var bool $pluginFirstInstall
      */
     protected $pluginFirstInstall = false;
+
+    /**
+     * Is the autoloader file supposed to be written out?
+     *
+     * @var bool $dumpAutoloader
+     */
+    protected $dumpAutoloader;
+
+    /**
+     * Is the autoloader file supposed to be optimized?
+     *
+     * @var bool $optimizeAutoloader
+     */
+    protected $optimizeAutoloader;
 
     /* ------------------------------------------------------------------------------------------------
      |  Getters & Setters
@@ -156,10 +171,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            ScriptEvents::PRE_INSTALL_CMD             => 'onInstallOrUpdate',
-            ScriptEvents::PRE_UPDATE_CMD              => 'onInstallOrUpdate',
-            ScriptEvents::PRE_AUTOLOAD_DUMP           => 'onInstallOrUpdate',
             InstallerEvents::PRE_DEPENDENCIES_SOLVING => 'onDependencySolve',
+            ScriptEvents::PRE_INSTALL_CMD             => 'onInstallUpdateOrDump',
+            ScriptEvents::PRE_UPDATE_CMD              => 'onInstallUpdateOrDump',
+            ScriptEvents::PRE_AUTOLOAD_DUMP           => 'onInstallUpdateOrDump',
             PackageEvents::POST_PACKAGE_INSTALL       => 'onPostPackageInstall',
             ScriptEvents::POST_INSTALL_CMD            => 'onPostInstallOrUpdate',
             ScriptEvents::POST_UPDATE_CMD             => 'onPostInstallOrUpdate',
@@ -177,7 +192,14 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     public function onDependencySolve(InstallerEvent $event)
     {
         if (empty($this->duplicateLinks)) {
+            // @codeCoverageIgnoreStart
+            // We shouldn't really ever be able to get here as this event is
+            // triggered inside Composer\Installer and should have been
+            // preceded by a pre-install or pre-update event but better to
+            // have an unneeded check than to break with some future change in
+            // the event system.
             return;
+            // @codeCoverageIgnoreEnd
         }
 
         $request = $event->getRequest();
@@ -202,7 +224,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      *
      * @param Event $event
      */
-    public function onInstallOrUpdate(Event $event)
+    public function onInstallUpdateOrDump(Event $event)
     {
         $config = $this->readConfig($this->getRootPackage());
 
@@ -219,6 +241,15 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             $this->devMode = $event->isDevMode();
             $this->mergePackages($config);
         }
+
+        if ($event->getName() === ScriptEvents::PRE_AUTOLOAD_DUMP) {
+            $this->dumpAutoloader = true;
+            $flags = $event->getFlags();
+
+            if (isset($flags['optimize'])) {
+                $this->optimizeAutoloader = $flags['optimize'];
+            }
+        }
     }
 
     /**
@@ -229,12 +260,16 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     public function onPostPackageInstall(PackageEvent $event)
     {
-        $package = $event->getOperation()->getPackage()->getName();
+        $op = $event->getOperation();
 
-        if ($package === self::PACKAGE_NAME) {
-            $this->debug(self::PLUGIN_KEY . ' installed');
-            $this->pluginFirstInstall = true;
-        }
+        if ($op instanceof InstallOperation) {
+            $package = $op->getPackage()->getName();
+
+            if ($package === self::PACKAGE_NAME) {
+                $this->debug(self::PLUGIN_KEY . ' installed');
+                $this->pluginFirstInstall = true;
+            }
+         }
     }
 
     /**
@@ -255,11 +290,21 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             '<comment>Running additional update to apply merge settings</comment>'
         );
 
+        $config       = $this->composer->getConfig();
+        $preferSource = $config->get('preferred-install') == 'source';
+        $preferDist   = $config->get('preferred-install') == 'dist';
+
         $installer = Installer::create(
             $event->getIO(),
             // Create a new Composer instance to ensure full processing of the merged files.
             Factory::create($event->getIO(), null, false)
         );
+
+        $installer->setPreferSource($preferSource);
+        $installer->setPreferDist($preferDist);
+        $installer->setDevMode($event->isDevMode());
+        $installer->setDumpAutoloader($this->dumpAutoloader);
+        $installer->setOptimizeAutoloader($this->optimizeAutoloader);
 
         // Force update mode so that new packages are processed rather than just telling the
         // user that composer.json and composer.lock don't match.

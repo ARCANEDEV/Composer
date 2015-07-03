@@ -103,9 +103,16 @@ class ComposerPluginTest extends TestCase
                 $that->assertArrayHasKey('monolog/monolog', $requires);
             });
 
+        $root->getSuggests()->shouldBeCalled();
+        $root->setSuggests(Argument::type('array'))
+            ->will(function ($args) use ($that) {
+                $suggest = $args[0];
+                $that->assertEquals(1, count($suggest));
+                $that->assertArrayHasKey('ext-apc', $suggest);
+            });
+
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
-        $root->getSuggests()->shouldNotBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
@@ -187,9 +194,12 @@ class ComposerPluginTest extends TestCase
         );
         $root->getRepositories()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
+
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
-        $this->assertEquals(1, count($extraInstalls));
+
+        $this->assertEquals(2, count($extraInstalls));
         $this->assertEquals('monolog/monolog', $extraInstalls[0][0]);
+        $this->assertEquals('foo', $extraInstalls[1][0]);
     }
 
     /** @test */
@@ -416,7 +426,7 @@ class ComposerPluginTest extends TestCase
             [],
             []
         );
-        $this->plugin->onInstallOrUpdate($event);
+        $this->plugin->onInstallUpdateOrDump($event);
         $requestInstalls = [];
 
         $request = $this->prophesize('Composer\\DependencyResolver\\Request');
@@ -438,6 +448,27 @@ class ComposerPluginTest extends TestCase
         );
 
         $this->plugin->onDependencySolve($event);
+
+        $event = new Event(
+            ScriptEvents::PRE_AUTOLOAD_DUMP,
+            $this->composer->reveal(),
+            $this->io->reveal(),
+            true, //dev mode
+            [],
+            ['optimize' => true]
+        );
+
+        $this->plugin->onInstallUpdateOrDump($event);
+        $event = new Event(
+            ScriptEvents::POST_INSTALL_CMD,
+            $this->composer->reveal(),
+            $this->io->reveal(),
+            true, //dev mode
+            [],
+            []
+        );
+
+        $this->plugin->onPostInstallOrUpdate($event);
 
         return $requestInstalls;
     }
