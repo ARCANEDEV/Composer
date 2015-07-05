@@ -1,0 +1,19 @@
+{
+    "require": {
+        "arcanedev/composer": "~1.0"
+    },
+    "config": {
+        "preferred-install": "source",
+        "classmap-authoritative": true,
+        "prepend-autoloader": false,
+        "optimize-autoloader": true
+    },
+    "extra": {
+        "merge-plugin": {
+            "include": [
+                "composer.local.json",
+                "modules/*/composer.json"
+            ]
+        }
+    }
+}

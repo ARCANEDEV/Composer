@@ -1,0 +1,16 @@
+{
+    "require": {
+        "arcanedev/sanitizer": "~1.0",
+        "arcanedev/no-captcha": "~1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Arcanedev\\Foo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Arcanedev\\Foo\\Tests\\": "tests/"
+        }
+    }
+}
