@@ -1,7 +1,7 @@
 <?php namespace Arcanedev\Composer;
 
 use Composer\Composer;
-use Composer\Config;
+use Arcanedev\Composer\Helpers\Config;
 use Composer\DependencyResolver\Operation\InstallOperation;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Factory;
@@ -226,10 +226,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     public function onInstallUpdateOrDump(Event $event)
     {
-        $config = $this->readConfig($this->getRootPackage());
+        $config = Config::read($this->getRootPackage(), self::PLUGIN_KEY);
 
         if (isset($config['recurse'])) {
-            $this->recurse = (bool)$config['recurse'];
+            $this->recurse = (bool) $config['recurse'];
         }
 
         if ($config['include']) {
@@ -320,34 +320,6 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Read Config
-     *
-     * @param  RootPackage $package
-     *
-     * @return array
-     */
-    private function readConfig(RootPackage $package)
-    {
-        $config = [
-            'include' => [],
-        ];
-
-        $extra = $package->getExtra();
-
-        if (isset($extra[self::PLUGIN_KEY])) {
-            $config = array_merge($config, $extra[self::PLUGIN_KEY]);
-
-            if ( ! is_array($config['include'])) {
-                $config['include'] = [
-                    $config['include']
-                ];
-            }
-        }
-
-        return $config;
-    }
-
-    /**
      * Find configuration files matching the configured glob patterns and
      * merge their contents with the master package.
      *
@@ -403,8 +375,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function readPackageJson($path)
     {
-        $file = new JsonFile($path);
-        $json = $file->read();
+        $json = (new JsonFile($path))->read();
 
         if ( ! isset($json['name'])) {
             $json['name'] = self::PLUGIN_KEY . '/' . strtr($path, DIRECTORY_SEPARATOR, '-');
