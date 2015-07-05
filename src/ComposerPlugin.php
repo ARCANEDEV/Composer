@@ -1,5 +1,6 @@
 <?php namespace Arcanedev\Composer;
 
+use Arcanedev\Composer\Helpers\Log;
 use Composer\Composer;
 use Arcanedev\Composer\Helpers\Config;
 use Composer\DependencyResolver\Operation\InstallOperation;
@@ -54,11 +55,6 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     protected $composer;
 
     /**
-     * @var IOInterface $inputOutput
-     */
-    protected $inputOutput;
-
-    /**
      * @var ArrayLoader $loader
      */
     protected $loader;
@@ -110,6 +106,11 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     protected $optimizeAutoloader;
 
+    /**
+     * @var Log
+     */
+    private $log;
+
     /* ------------------------------------------------------------------------------------------------
      |  Getters & Setters
      | ------------------------------------------------------------------------------------------------
@@ -159,7 +160,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     public function activate(Composer $composer, IOInterface $io)
     {
         $this->composer           = $composer;
-        $this->inputOutput        = $io;
+        $this->log                = new Log($io);
         $this->pluginFirstInstall = false;
     }
 
@@ -206,13 +207,13 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
 
         /** @var \Composer\Package\Link $link */
         foreach ($this->duplicateLinks['require'] as $link) {
-            $this->debug("Adding dependency <comment>{$link}</comment>");
+            $this->log->debug("Adding dependency <comment>{$link}</comment>");
             $request->install($link->getTarget(), $link->getConstraint());
         }
 
         if ($this->devMode) {
             foreach ($this->duplicateLinks['require-dev'] as $link) {
-                $this->debug("Adding dev dependency <comment>{$link}</comment>");
+                $this->log->debug("Adding dev dependency <comment>{$link}</comment>");
                 $request->install($link->getTarget(), $link->getConstraint());
             }
         }
@@ -266,7 +267,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             $package = $op->getPackage()->getName();
 
             if ($package === self::PACKAGE_NAME) {
-                $this->debug(self::PLUGIN_KEY . ' installed');
+                $this->log->debug(self::PLUGIN_KEY . ' installed');
                 $this->pluginFirstInstall = true;
             }
          }
@@ -286,7 +287,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         }
 
         $this->pluginFirstInstall = false;
-        $this->debug(
+        $this->log->debug(
             '<comment>Running additional update to apply merge settings</comment>'
         );
 
@@ -347,12 +348,12 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     private function loadFile(RootPackage $root, $path)
     {
         if (in_array($path, $this->loadedFiles)) {
-            $this->debug("Skipping duplicate <comment>{$path}</comment>...");
+            $this->log->debug("Skipping duplicate <comment>{$path}</comment>...");
 
             return;
         }
 
-        $this->debug("Loading <comment>{$path}</comment>...");
+        $this->log->debug("Loading <comment>{$path}</comment>...");
         $this->loadedFiles[] = $path;
         $json                = $this->readPackageJson($path);
         $package             = $this->jsonToPackage($json);
@@ -572,7 +573,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             return null;
         }
 
-        $this->debug("Adding {$json['type']} repository");
+        $this->log->debug("Adding {$json['type']} repository");
         $repo = $repoManager->createRepository($json['type'], $json);
         $repoManager->addRepository($repo);
 
@@ -594,12 +595,12 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         /** @var \Composer\Package\Link $link */
         foreach ($merge as $name => $link) {
             if ( ! isset($origin[$name])) {
-                $this->debug("Merging <comment>{$name}</comment>");
+                $this->log->debug("Merging <comment>{$name}</comment>");
                 $origin[$name] = $link;
             }
             else {
                 // Defer to solver.
-                $this->debug("Deferring duplicate <comment>{$name}</comment>");
+                $this->log->debug("Deferring duplicate <comment>{$name}</comment>");
                 $dups[] = $link;
             }
         }
@@ -625,28 +626,5 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         }
 
         return $package;
-    }
-
-    /**
-     * Log a debug message
-     *
-     * Messages will be output at the "verbose" logging level
-     * (eg `-v` needed on the Composer command).
-     *
-     * @param string $message
-     */
-    private function debug($message)
-    {
-        if ($this->inputOutput->isVerbose()) {
-            $message = "  <info>[merge]</info> {$message}";
-
-            if (method_exists($this->inputOutput, 'writeError')) {
-                $this->inputOutput->writeError($message);
-            }
-            else {
-                // Backwards compatibility for Composer before cb336a5
-                $this->inputOutput->write($message);
-            }
-        }
     }
 }
