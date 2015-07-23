@@ -2,6 +2,10 @@
 
 use Composer\IO\IOInterface;
 
+/**
+ * Class Log
+ * @package Arcanedev\Composer\Helpers
+ */
 class Log
 {
     /* ------------------------------------------------------------------------------------------------
