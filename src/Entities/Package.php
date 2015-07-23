@@ -1,4 +1,5 @@
 <?php namespace Arcanedev\Composer\Entities;
+
 use Composer\Json\JsonFile;
 
 /**
@@ -11,6 +12,9 @@ class Package extends JsonFile
      |  Constructor
      | ------------------------------------------------------------------------------------------------
      */
+    /**
+     * @param string $path
+     */
     public function __construct($path)
     {
         parent::__construct($path);
@@ -19,6 +23,13 @@ class Package extends JsonFile
     /* ------------------------------------------------------------------------------------------------
      |  Main Functions
      | ------------------------------------------------------------------------------------------------
+     */
+    /**
+     * Reads json file.
+     *
+     * @throws \RuntimeException
+     *
+     * @return mixed
      */
     public function read()
     {
