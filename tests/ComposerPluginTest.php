@@ -244,7 +244,7 @@ class ComposerPluginTest extends TestCase
                 $requires = $args[0];
                 $that->assertEquals(1, count($requires));
                 $that->assertArrayHasKey(
-                    'wikimedia/composer-merge-plugin',
+                    'arcanedev/composer',
                     $requires
                 );
             });
@@ -299,13 +299,14 @@ class ComposerPluginTest extends TestCase
         $root   = $this->rootFromJson("{$dir}/composer.json");
 
         $root->getAutoload()->shouldBeCalled();
+        $root->getDevAutoload()->shouldBeCalled();
         $root->getRequires()->shouldNotBeCalled();
-        $root->setAutoload(Argument::type('array'))
-            ->will(function ($args) use ($that) {
+        $root->setAutoload(Argument::type('array'))->will(
+            function ($args) use ($that) {
                 $that->assertEquals(
                     [
                         'psr-4'     => [
-                            'Arcanedev\\'           => 'arcanedev/',
+                            'Arcanedev\\'           => 'src/',
                             'Arcanedev\\Package\\'  => [
                                 'modules/Package/package/',
                                 'modules/Package/libs/'
@@ -326,8 +327,20 @@ class ComposerPluginTest extends TestCase
                     ],
                     $args[0]
                 );
-
-            });
+            }
+        );
+        $root->setDevAutoload(Argument::type('array'))->will(
+            function ($args) use ($that) {
+                $that->assertEquals(
+                    [
+                        'psr-4'     => [
+                            'Arcanedev\\Module\\Tests\\'    => 'modules/Package/module/tests/',
+                        ],
+                    ],
+                    $args[0]
+                );
+            }
+        );
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 

@@ -9,6 +9,6 @@
         }
     ],
     "require": {
-        "wikimedia/composer-merge-plugin": "dev-master#deadbeef"
+        "arcanedev/composer": "dev-master"
     }
 }

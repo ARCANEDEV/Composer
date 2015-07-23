@@ -1,7 +1,12 @@
 {
     "autoload": {
         "psr-4": {
-            "Arcanedev\\": "arcanedev/"
+            "Arcanedev\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Arcanedev\\Tests\\": "tests/"
         }
     },
     "extra": {

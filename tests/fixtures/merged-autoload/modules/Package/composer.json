@@ -10,5 +10,10 @@
         },
         "files" : ["helpers.php"],
         "classmap": ["init.php", "includes/"]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Arcanedev\\Module\\Tests\\": "module/tests/"
+        }
     }
 }

@@ -194,11 +194,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     {
         if (empty($this->duplicateLinks)) {
             // @codeCoverageIgnoreStart
-            // We shouldn't really ever be able to get here as this event is
-            // triggered inside Composer\Installer and should have been
-            // preceded by a pre-install or pre-update event but better to
-            // have an unneeded check than to break with some future change in
-            // the event system.
+            // We shouldn't really ever be able to get here as this event is triggered
+            // inside Composer\Installer and should have been preceded by a pre-install
+            // or pre-update event but better to have an unneeded check than to break
+            // with some future change in the event system.
             return;
             // @codeCoverageIgnoreEnd
         }
@@ -234,7 +233,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         }
 
         if ($config['include']) {
-            $this->loader = new ArrayLoader;
+            $this->loader         = new ArrayLoader;
             $this->duplicateLinks = [
                 'require'       => [],
                 'require-dev'   => [],
@@ -465,21 +464,16 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function mergeAutoload(RootPackage $root, CompletePackage $package, $path)
     {
-        $autoload = $package->getAutoload();
-
-        if (empty($autoload)) {
+        if (empty($autoload = $package->getAutoload())) {
             return;
         }
 
-        $packagePath = substr($path, 0, strrpos($path, '/') + 1);
+        $this->prependPath($path, $autoload);
 
-        array_walk_recursive($autoload, function(&$path) use ($packagePath) {
-            $path = $packagePath . $path;
-        });
-
-        $root->setAutoload(
-            array_merge_recursive($root->getAutoload(), $autoload)
-        );
+        $root->setAutoload(array_merge_recursive(
+            $root->getAutoload(),
+            $autoload
+        ));
     }
 
     /**
@@ -491,21 +485,16 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function mergeDevAutoload(RootPackage $root, CompletePackage $package, $path)
     {
-        $devAutoload = $package->getDevAutoload();
-
-        if (empty($devAutoload)) {
+        if (empty($devAutoload = $package->getDevAutoload())) {
             return;
         }
 
-        $packagePath = substr($path, 0, strrpos($path, '/') + 1);
+        $this->prependPath($path, $devAutoload);
 
-        array_walk_recursive($devAutoload, function(&$path) use ($packagePath) {
-            $path = $packagePath . $path;
-        });
-
-        $root->setDevAutoload(
-            array_merge_recursive($root->getDevAutoload(), $devAutoload)
-        );
+        $root->setDevAutoload(array_merge_recursive(
+            $root->getDevAutoload() ?: [],
+            $devAutoload
+        ));
     }
 
     /**
@@ -580,6 +569,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         return $repo;
     }
 
+    /* ------------------------------------------------------------------------------------------------
+     |  Other Functions
+     | ------------------------------------------------------------------------------------------------
+     */
     /**
      * Merge two collections of package links and collect duplicates for
      * subsequent processing.
@@ -626,5 +619,23 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         }
 
         return $package;
+    }
+
+    /**
+     * Prepend a path to a collection of autoloads.
+     *
+     * @param string $basePath
+     * @param array  $autoloads
+     */
+    public function prependPath($basePath, array &$autoloads)
+    {
+        $basePath = substr($basePath, 0, strrpos($basePath, '/') + 1);
+
+        array_walk_recursive(
+            $autoloads,
+            function(&$path) use ($basePath) {
+                $path = $basePath . $path;
+            }
+        );
     }
 }
