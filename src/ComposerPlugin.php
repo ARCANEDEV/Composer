@@ -1,9 +1,9 @@
 <?php namespace Arcanedev\Composer;
 
 use Arcanedev\Composer\Entities\Package;
+use Arcanedev\Composer\Helpers\Config;
 use Arcanedev\Composer\Helpers\Log;
 use Composer\Composer;
-use Arcanedev\Composer\Helpers\Config;
 use Composer\DependencyResolver\Operation\InstallOperation;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Factory;
@@ -13,7 +13,6 @@ use Composer\Installer\InstallerEvents;
 use Composer\Installer\PackageEvent;
 use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
-use Composer\Json\JsonFile;
 use Composer\Package\AliasPackage;
 use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
