@@ -464,15 +464,17 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function mergeAutoload(RootPackage $root, CompletePackage $package, $path)
     {
-        if (empty($autoload = $package->getAutoload())) {
+        $autoloads = $package->getAutoload();
+
+        if (empty($autoloads)) {
             return;
         }
 
-        $this->prependPath($path, $autoload);
+        $this->prependPath($path, $autoloads);
 
         $root->setAutoload(array_merge_recursive(
             $root->getAutoload(),
-            $autoload
+            $autoloads
         ));
     }
 
@@ -485,15 +487,17 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function mergeDevAutoload(RootPackage $root, CompletePackage $package, $path)
     {
-        if (empty($devAutoload = $package->getDevAutoload())) {
+        $devAutoloads = $package->getDevAutoload();
+
+        if (empty($devAutoloads)) {
             return;
         }
 
-        $this->prependPath($path, $devAutoload);
+        $this->prependPath($path, $devAutoloads);
 
         $root->setDevAutoload(array_merge_recursive(
             $root->getDevAutoload() ?: [],
-            $devAutoload
+            $devAutoloads
         ));
     }
 
