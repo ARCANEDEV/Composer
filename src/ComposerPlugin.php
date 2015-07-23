@@ -1,5 +1,6 @@
 <?php namespace Arcanedev\Composer;
 
+use Arcanedev\Composer\Entities\Package;
 use Arcanedev\Composer\Helpers\Log;
 use Composer\Composer;
 use Arcanedev\Composer\Helpers\Config;
@@ -375,17 +376,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function readPackageJson($path)
     {
-        $json = (new JsonFile($path))->read();
-
-        if ( ! isset($json['name'])) {
-            $json['name'] = self::PLUGIN_KEY . '/' . strtr($path, DIRECTORY_SEPARATOR, '-');
-        }
-
-        if ( ! isset($json['version'])) {
-            $json['version'] = '1.0.0';
-        }
-
-        return $json;
+        return (new Package($path))->read();
     }
 
     /**
