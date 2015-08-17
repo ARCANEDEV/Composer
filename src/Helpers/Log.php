@@ -28,7 +28,7 @@ class Log
      *
      * @return self
      */
-    public function setIO($io)
+    public function setIO(IOInterface $io)
     {
         $this->io = $io;
 
@@ -61,6 +61,7 @@ class Log
      */
     public function debug($message)
     {
+        // @codeCoverageIgnoreStart
         if ($this->io->isVerbose()) {
             $message = "  <info>[merge]</info> {$message}";
 
@@ -72,5 +73,6 @@ class Log
                 $this->io->write($message);
             }
         }
+        // @codeCoverageIgnoreEnd
     }
 }
