@@ -462,17 +462,15 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     {
         $requires = $package->getRequires();
 
-        if (empty($requires)) {
-            return;
+        if ( ! empty($requires)) {
+            $this->mergeStabilityFlags($root, $requires);
+
+            $root->setRequires($this->mergeLinks(
+                $root->getRequires(),
+                $requires,
+                $this->duplicateLinks['require']
+            ));
         }
-
-        $this->mergeStabilityFlags($root, $requires);
-
-        $root->setRequires($this->mergeLinks(
-            $root->getRequires(),
-            $requires,
-            $this->duplicateLinks['require']
-        ));
     }
 
     /**

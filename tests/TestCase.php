@@ -30,7 +30,7 @@ abstract class TestCase extends ProphecyTestCase
     /**
      * @param  string $file
      *
-     * @return ObjectProphecy
+     * @return mixed
      */
     protected function rootFromJson($file)
     {
@@ -48,8 +48,8 @@ abstract class TestCase extends ProphecyTestCase
             $json
         );
 
-        /** @var ObjectProphecy $root */
-        $root = $this->prophesize('Composer\Package\RootPackage');
+        /** @var mixed $root */
+        $root = $this->prophesize('Composer\\Package\\RootPackage');
         $root->getRequires()->willReturn($data['require'])->shouldBeCalled();
         $root->getDevRequires()->willReturn($data['require-dev']);
         $root->getRepositories()->willReturn($data['repositories']);

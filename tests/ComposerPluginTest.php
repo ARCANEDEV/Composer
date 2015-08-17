@@ -247,7 +247,7 @@ class ComposerPluginTest extends TestCase
         $that        = $this;
         $io          = $this->io;
         $dir         = $this->fixtureDir('merged-repositories');
-        $repoManager = $this->prophesize('Composer\Repository\RepositoryManager');
+        $repoManager = $this->prophesize('Composer\\Repository\\RepositoryManager');
 
         $repoManager
             ->createRepository(Argument::type('string'), Argument::type('array'))
@@ -539,7 +539,6 @@ class ComposerPluginTest extends TestCase
     {
         $that = $this;
         $dir  = $this->fixtureDir('has-branch-alias');
-
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))
@@ -557,17 +556,17 @@ class ComposerPluginTest extends TestCase
         ], $root->getRequires());
 
         $that->assertEquals([
-            "merge-plugin" => [
-                "include"   => [
-                    "composer.local.json"
+            'merge-plugin' => [
+                'include'   => [
+                    'composer.local.json'
                 ]
             ],
-            "branch-alias" => [
-                "dev-master" => "5.0.x-dev"
+            'branch-alias' => [
+                'dev-master' => '5.0.x-dev'
             ]
         ], $root->getExtra());
 
-        $alias = $this->prophesize('Composer\Package\RootAliasPackage');
+        $alias = $this->prophesize('Composer\\Package\\RootAliasPackage');
         $alias->getAliasOf()->willReturn($root)->shouldBeCalled();
 
         $this->triggerPlugin($alias->reveal(), $dir);
@@ -603,21 +602,25 @@ class ComposerPluginTest extends TestCase
         $expects = [
             'merge-plugin/b.json',
             'merge-plugin/a.json',
-            'merge-plugin/glob/a-glob2.json',
-            'merge-plugin/glob/b-glob1.json'
+            'merge-plugin/glob-a-glob2.json',
+            'merge-plugin/glob-b-glob1.json'
         ];
 
         $root->setRequires(Argument::type('array'))->will(
             function ($args) use ($that, &$expects) {
                 $expectedSource = array_shift($expects);
-                $that->assertEquals(
-                    $expectedSource,
-                    $args[0]['arcanedev/workbench']->getSource()
-                );
+
+                /** @var \Composer\Package\Link $link */
+                $link         = $args[0]['arcanedev/workbench'];
+
+                // @FIXME: This fix is for windows machines
+                $actualSource = str_replace('/glob/', '/glob-', $link->getSource());
+
+                $that->assertEquals($expectedSource, $actualSource);
             }
         );
 
-        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+        $this->triggerPlugin($root->reveal(), $dir);
     }
 
     /* ------------------------------------------------------------------------------------------------
