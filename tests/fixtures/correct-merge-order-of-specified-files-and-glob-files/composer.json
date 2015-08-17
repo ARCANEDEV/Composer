@@ -1,0 +1,18 @@
+{
+    "require": {
+        "arcanedev/composer": "dev-master"
+    },
+    "require": {
+        "arcanedev/workbench":"1.0"
+    },
+    "extra": {
+        "merge-plugin": {
+            "replace" : true,
+            "include": [
+                "b.json",
+                "a.json",
+                "glob/*.json"
+            ]
+        }
+    }
+}

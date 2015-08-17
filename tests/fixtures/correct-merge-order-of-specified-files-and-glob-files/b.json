@@ -1,0 +1,8 @@
+{
+    "require": {
+        "arcanedev/composer": "dev-master"
+    },
+    "require": {
+        "arcanedev/workbench": "2.0"
+    }
+}

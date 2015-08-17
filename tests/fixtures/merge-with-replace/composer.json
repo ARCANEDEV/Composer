@@ -1,0 +1,20 @@
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "./.."
+        }
+    ],
+    "require": {
+        "arcanedev/composer": "*@dev",
+        "monolog/monolog": "~1.0"
+    },
+    "extra": {
+        "merge-plugin": {
+            "replace" : true,
+            "include": [
+                "composer.local.json"
+            ]
+        }
+    }
+}
