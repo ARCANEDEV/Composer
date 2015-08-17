@@ -5,6 +5,7 @@ use Arcanedev\Composer\Helpers\Config;
 use Arcanedev\Composer\Helpers\Log;
 use Composer\Composer;
 use Composer\DependencyResolver\Operation\InstallOperation;
+use Composer\DependencyResolver\Request;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Factory;
 use Composer\Installer;
@@ -16,6 +17,7 @@ use Composer\IO\IOInterface;
 use Composer\Package\AliasPackage;
 use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
+use Composer\Package\Link;
 use Composer\Package\Loader\ArrayLoader;
 use Composer\Package\RootPackage;
 use Composer\Package\Version\VersionParser;
@@ -79,6 +81,29 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     protected $recurse = true;
 
     /**
+     * Whether to replace duplicate links.
+     *
+     * Normally, duplicate links are resolved using Composer's resolver.
+     * Setting this flag changes the behaviour to 'last definition wins'.
+     *
+     * @var bool $replace
+     */
+    protected $replace = false;
+
+    /**
+     * Whether to merge the extra section.
+     *
+     * By default, the extra section is not merged and there will be many cases where
+     * the merge of the extra section is performed too late to be of use to other plugins.
+     * When enabled, merging uses one of two strategies - either 'first wins' or 'last wins'.
+     * When enabled, 'first wins' is the default behaviour.
+     * If Replace mode is activated then 'last wins' is used.
+     *
+     * @var bool $mergeExtra
+     */
+    protected $mergeExtra = false;
+
+    /**
      * Files that have already been processed
      *
      * @var string[] $loadedFiles
@@ -91,6 +116,13 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * @var bool $pluginFirstInstall
      */
     protected $pluginFirstInstall = false;
+
+    /**
+     * Were packages locked at the time of $pluginFirstInstall ?
+     *
+     * @var bool $wasLockedAtInstall
+     */
+    protected $wasLockedAtInstall;
 
     /**
      * Is the autoloader file supposed to be written out?
@@ -128,13 +160,15 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             $root = $root->getAliasOf();
         }
 
-        if ($root instanceof RootPackage) {
-            return $root;
+        if ( ! $root instanceof RootPackage) {
+            // @codeCoverageIgnoreStart
+            throw new UnexpectedValueException(
+                'Expected instance of Composer\\Package\\RootPackage, got ' . get_class($root)
+            );
+            // @codeCoverageIgnoreEnd
         }
 
-        throw new UnexpectedValueException(
-            'Expected instance of Composer\\Package\\RootPackage, got ' . get_class($root)
-        );
+        return $root;
     }
 
     /**
@@ -145,6 +179,16 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     public function isFirstInstall()
     {
         return $this->pluginFirstInstall;
+    }
+
+    /**
+     * Was a lock file present when the plugin was installed?
+     *
+     * @return bool
+     */
+    public function wasLocked()
+    {
+        return $this->wasLockedAtInstall;
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -162,6 +206,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         $this->composer           = $composer;
         $this->log                = new Log($io);
         $this->pluginFirstInstall = false;
+        $this->wasLockedAtInstall = false;
     }
 
     /**
@@ -204,17 +249,36 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
 
         $request = $event->getRequest();
 
-        /** @var \Composer\Package\Link $link */
-        foreach ($this->duplicateLinks['require'] as $link) {
-            $this->log->debug("Adding dependency <comment>{$link}</comment>");
-            $request->install($link->getTarget(), $link->getConstraint());
-        }
+        /** @var Link $link */
+        $this->installRequires(
+            $request,
+            $this->duplicateLinks['require']
+        );
 
         if ($this->devMode) {
-            foreach ($this->duplicateLinks['require-dev'] as $link) {
-                $this->log->debug("Adding dev dependency <comment>{$link}</comment>");
-                $request->install($link->getTarget(), $link->getConstraint());
-            }
+            $this->installRequires(
+                $request,
+                $this->duplicateLinks['require-dev'],
+                true
+            );
+        }
+    }
+
+    /**
+     * Install requirements
+     *
+     * @param Request $request
+     * @param Link[]  $links
+     * @param bool    $dev
+     */
+    private function installRequires(Request $request, array $links, $dev = false)
+    {
+        foreach ($links as $link) {
+            $this->log->debug($dev
+                ? "Adding dev dependency <comment>{$link}</comment>"
+                : "Adding dependency <comment>{$link}</comment>"
+            );
+            $request->install($link->getTarget(), $link->getConstraint());
         }
     }
 
@@ -232,6 +296,14 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             $this->recurse = (bool) $config['recurse'];
         }
 
+        if (isset($config['replace'])) {
+            $this->replace = (bool) $config['replace'];
+        }
+
+        if (isset($config['merge-extra'])) {
+            $this->mergeExtra = (bool) $config['merge-extra'];
+        }
+
         if ($config['include']) {
             $this->loader         = new ArrayLoader;
             $this->duplicateLinks = [
@@ -244,7 +316,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
 
         if ($event->getName() === ScriptEvents::PRE_AUTOLOAD_DUMP) {
             $this->dumpAutoloader = true;
-            $flags = $event->getFlags();
+            $flags                = $event->getFlags();
 
             if (isset($flags['optimize'])) {
                 $this->optimizeAutoloader = $flags['optimize'];
@@ -260,7 +332,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     public function onPostPackageInstall(PackageEvent $event)
     {
-        $op = $event->getOperation();
+        $op       = $event->getOperation();
 
         if ($op instanceof InstallOperation) {
             $package = $op->getPackage()->getName();
@@ -268,6 +340,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             if ($package === self::PACKAGE_NAME) {
                 $this->log->debug(self::PLUGIN_KEY . ' installed');
                 $this->pluginFirstInstall = true;
+                $this->wasLockedAtInstall = $event->getComposer()->getLocker()->isLocked();
             }
          }
     }
@@ -281,38 +354,36 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     public function onPostInstallOrUpdate(Event $event)
     {
-        if ( ! $this->isFirstInstall()) {
-            return;
+        if ($this->isFirstInstall()) {
+            $this->pluginFirstInstall = false;
+            $this->log->debug(
+                '<comment>Running additional update to apply merge settings</comment>'
+            );
+
+            $config       = $this->composer->getConfig();
+            $preferSource = $config->get('preferred-install') == 'source';
+            $preferDist   = $config->get('preferred-install') == 'dist';
+
+            $installer = Installer::create(
+                $event->getIO(),
+                // Create a new Composer instance to ensure full processing of the merged files.
+                Factory::create($event->getIO(), null, false)
+            );
+
+            $installer->setPreferSource($preferSource);
+            $installer->setPreferDist($preferDist);
+            $installer->setDevMode($event->isDevMode());
+            $installer->setDumpAutoloader($this->dumpAutoloader);
+            $installer->setOptimizeAutoloader($this->optimizeAutoloader);
+
+            if ( ! $this->wasLocked()) {
+                // Force update mode so that new packages are processed rather than just telling the
+                // user that composer.json and composer.lock don't match.
+                $installer->setUpdate(true);
+            }
+
+            $installer->run();
         }
-
-        $this->pluginFirstInstall = false;
-        $this->log->debug(
-            '<comment>Running additional update to apply merge settings</comment>'
-        );
-
-        $config       = $this->composer->getConfig();
-        $preferSource = $config->get('preferred-install') == 'source';
-        $preferDist   = $config->get('preferred-install') == 'dist';
-
-        $installer = Installer::create(
-            $event->getIO(),
-            // Create a new Composer instance to ensure full processing of the merged files.
-            Factory::create($event->getIO(), null, false)
-        );
-
-        $installer->setPreferSource($preferSource);
-        $installer->setPreferDist($preferDist);
-        $installer->setDevMode($event->isDevMode());
-        $installer->setDumpAutoloader($this->dumpAutoloader);
-        $installer->setOptimizeAutoloader($this->optimizeAutoloader);
-
-        // Force update mode so that new packages are processed rather than just telling the
-        // user that composer.json and composer.lock don't match.
-        $installer->setUpdate(true);
-        $installer->setDevMode($event->isDevMode());
-        // TODO: can we set more flags to match the current run?
-
-        $installer->run();
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -327,6 +398,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function mergePackages(array $config)
     {
+        $root   = $this->getRootPackage();
         $paths  = array_reduce(
             array_map('glob', $config['include']),
             'array_merge',
@@ -334,7 +406,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         );
 
         foreach ($paths as $path) {
-            $this->loadFile($this->getRootPackage(), $path);
+            $this->loadFile($root, $path);
         }
     }
 
@@ -348,21 +420,23 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     {
         if (in_array($path, $this->loadedFiles)) {
             $this->log->debug("Skipping duplicate <comment>{$path}</comment>...");
-
             return;
+        }
+        else {
+            $this->loadedFiles[] = $path;
         }
 
         $this->log->debug("Loading <comment>{$path}</comment>...");
-        $this->loadedFiles[] = $path;
-        $json                = $this->readPackageJson($path);
-        $package             = $this->jsonToPackage($json);
+        $json    = $this->readPackageJson($path);
+        $package = $this->jsonToPackage($json);
 
         $this->mergeRequires($root, $package);
         $this->mergeDevRequires($root, $package);
+        $this->mergeExtraSection($root, $package);
         $this->mergeAutoload($root, $package, $path);
         $this->mergeDevAutoload($root, $package, $path);
-        $this->mergeSuggests($root, $package);
         $this->addRepositories($root, $json);
+        $this->mergeSuggests($root, $package);
         $this->addExtras($json);
     }
 
@@ -411,17 +485,89 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     {
         $requires = $package->getDevRequires();
 
-        if (empty($requires)) {
+        if ( ! empty($requires)) {
+            $this->mergeStabilityFlags($root, $requires);
+
+            $root->setDevRequires($this->mergeLinks(
+                $root->getDevRequires(),
+                $requires,
+                $this->duplicateLinks['require-dev']
+            ));
+        }
+    }
+
+    /**
+     * Merge two collections of package links and collect duplicates for
+     * subsequent processing.
+     *
+     * @param  array $origin Primary collection
+     * @param  array $merge  Additional collection
+     * @param  array &$dups  Duplicate storage
+     *
+     * @return array
+     */
+    private function mergeLinks(array $origin, array $merge, array &$dups)
+    {
+        /** @var Link $link */
+        foreach ($merge as $name => $link) {
+            if ( ! isset($origin[$name]) || $this->replace) {
+                $this->log->debug("Merging <comment>{$name}</comment>");
+                $origin[$name] = $link;
+            }
+            else {
+                // Defer to solver.
+                $this->log->debug("Deferring duplicate <comment>{$name}</comment>");
+                $dups[] = $link;
+            }
+        }
+
+        return $origin;
+    }
+
+    /**
+     * Merge the extra sections of two config files.
+     *
+     * @param RootPackage     $root    The root package.
+     * @param CompletePackage $package The imported package to merge.
+     */
+    public function mergeExtraSection(RootPackage $root, CompletePackage $package)
+    {
+        if ( ! $this->mergeExtra) {
             return;
         }
 
-        $this->mergeStabilityFlags($root, $requires);
+        $this->log->debug('Merging extra section');
 
-        $root->setDevRequires($this->mergeLinks(
-            $root->getDevRequires(),
-            $requires,
-            $this->duplicateLinks['require-dev']
-        ));
+        $packageExtra = $package->getExtra();
+
+        if ( ! empty($packageExtra)) {
+            if (isset($packageExtra['merge-plugin'])) {
+                $this->log->debug('Skipping merge-plugin key');
+                unset($packageExtra['merge-plugin']);
+            }
+
+            $rootExtra = $root->getExtra();
+            foreach ($packageExtra as $key => $value) {
+                if (isset($rootExtra[$key]) && ! $this->replace) {
+                    $name = substr($package->getPrettyName(), 13);
+                    $msg  = "Duplicate key <comment>{$key}</comment> in extra section " .
+                        "of imported config <comment>{$name}</comment> will be ignored.";
+                }
+                else {
+                    $msg = "Merging extra key <comment>{$key}</comment>";
+                }
+
+                $this->log->debug($msg);
+            }
+
+            $extras = $this->replace
+                // With array_merge, keys in the $packageExtra array will replace those in $rootExtra
+                ? array_merge($rootExtra, $packageExtra)
+                // With '+', keys in the $packageExtra array will be skipped if the key exists in $rootExtra
+                : $rootExtra + $packageExtra;
+
+            $root->setExtra($extras);
+        }
     }
 
     /**
@@ -434,8 +580,8 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     {
         $flags = $root->getStabilityFlags();
 
+        /** @var Link $link */
         foreach ($requires as $name => $link) {
-            /** @var \Composer\Package\Link $link */
             $name         = strtolower($name);
             $version      = $link->getPrettyConstraint();
             $stability    = VersionParser::parseStability($version);
@@ -568,34 +714,6 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Merge two collections of package links and collect duplicates for
-     * subsequent processing.
-     *
-     * @param  array $origin Primary collection
-     * @param  array $merge  Additional collection
-     * @param  array &$dups  Duplicate storage
-     *
-     * @return array
-     */
-    private function mergeLinks(array $origin, array $merge, array &$dups)
-    {
-        /** @var \Composer\Package\Link $link */
-        foreach ($merge as $name => $link) {
-            if ( ! isset($origin[$name])) {
-                $this->log->debug("Merging <comment>{$name}</comment>");
-                $origin[$name] = $link;
-            }
-            else {
-                // Defer to solver.
-                $this->log->debug("Deferring duplicate <comment>{$name}</comment>");
-                $dups[] = $link;
-            }
-        }
-
-        return $origin;
-    }
-
-    /**
      * Convert the json array to package object
      *
      * @param  array $json
@@ -607,9 +725,11 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         $package = $this->loader->load($json);
 
         if ( ! $package instanceof CompletePackage) {
+            // @codeCoverageIgnoreStart
             throw new UnexpectedValueException(
                 'Expected instance of CompletePackage, got ' . get_class($package)
             );
+            // @codeCoverageIgnoreEnd
         }
 
         return $package;
