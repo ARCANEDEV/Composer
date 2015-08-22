@@ -1,8 +1,8 @@
 <?php namespace Arcanedev\Composer;
 
 use Arcanedev\Composer\Entities\Package;
-use Arcanedev\Composer\Helpers\Config;
-use Arcanedev\Composer\Helpers\Log;
+use Arcanedev\Composer\Entities\PluginState;
+use Arcanedev\Composer\Utilities\Logger;
 use Composer\Composer;
 use Composer\DependencyResolver\Operation\InstallOperation;
 use Composer\DependencyResolver\Request;
@@ -14,18 +14,11 @@ use Composer\Installer\InstallerEvents;
 use Composer\Installer\PackageEvent;
 use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
-use Composer\Package\AliasPackage;
-use Composer\Package\BasePackage;
-use Composer\Package\CompletePackage;
 use Composer\Package\Link;
-use Composer\Package\Loader\ArrayLoader;
 use Composer\Package\RootPackage;
-use Composer\Package\Version\VersionParser;
 use Composer\Plugin\PluginInterface;
-use Composer\Repository\RepositoryManager;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
-use UnexpectedValueException;
 
 /**
  * Class ComposerPlugin
@@ -57,51 +50,14 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     protected $composer;
 
     /**
-     * @var ArrayLoader $loader
+     * @var PluginState $state
      */
-    protected $loader;
+    protected $state;
 
     /**
-     * @var array $duplicateLinks
+     * @var Logger $logger
      */
-    protected $duplicateLinks;
-
-    /**
-     * Dev mode
-     *
-     * @var bool $devMode
-     */
-    protected $devMode = false;
-
-    /**
-     * Whether to recursively include dependencies
-     *
-     * @var bool $recurse
-     */
-    protected $recurse = true;
-
-    /**
-     * Whether to replace duplicate links.
-     *
-     * Normally, duplicate links are resolved using Composer's resolver.
-     * Setting this flag changes the behaviour to 'last definition wins'.
-     *
-     * @var bool $replace
-     */
-    protected $replace = false;
-
-    /**
-     * Whether to merge the extra section.
-     *
-     * By default, the extra section is not merged and there will be many cases where
-     * the merge of the extra section is performed too late to be of use to other plugins.
-     * When enabled, merging uses one of two strategies - either 'first wins' or 'last wins'.
-     * When enabled, 'first wins' is the default behaviour.
-     * If Replace mode is activated then 'last wins' is used.
-     *
-     * @var bool $mergeExtra
-     */
-    protected $mergeExtra = false;
+    protected $logger;
 
     /**
      * Files that have already been processed
@@ -109,87 +65,6 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * @var string[] $loadedFiles
      */
     protected $loadedFiles = [];
-
-    /**
-     * Is this the first time that our plugin has been installed?
-     *
-     * @var bool $pluginFirstInstall
-     */
-    protected $pluginFirstInstall = false;
-
-    /**
-     * Were packages locked at the time of $pluginFirstInstall ?
-     *
-     * @var bool $wasLockedAtInstall
-     */
-    protected $wasLockedAtInstall;
-
-    /**
-     * Is the autoloader file supposed to be written out?
-     *
-     * @var bool $dumpAutoloader
-     */
-    protected $dumpAutoloader;
-
-    /**
-     * Is the autoloader file supposed to be optimized?
-     *
-     * @var bool $optimizeAutoloader
-     */
-    protected $optimizeAutoloader;
-
-    /**
-     * @var Log
-     */
-    private $log;
-
-    /* ------------------------------------------------------------------------------------------------
-     |  Getters & Setters
-     | ------------------------------------------------------------------------------------------------
-     */
-    /**
-     * Get the root package
-     *
-     * @return RootPackage
-     */
-    protected function getRootPackage()
-    {
-        $root = $this->composer->getPackage();
-
-        if ($root instanceof AliasPackage) {
-            $root = $root->getAliasOf();
-        }
-
-        if ( ! $root instanceof RootPackage) {
-            // @codeCoverageIgnoreStart
-            throw new UnexpectedValueException(
-                'Expected instance of Composer\\Package\\RootPackage, got ' . get_class($root)
-            );
-            // @codeCoverageIgnoreEnd
-        }
-
-        return $root;
-    }
-
-    /**
-     * Is this the first time that the plugin has been installed?
-     *
-     * @return bool
-     */
-    public function isFirstInstall()
-    {
-        return $this->pluginFirstInstall;
-    }
-
-    /**
-     * Was a lock file present when the plugin was installed?
-     *
-     * @return bool
-     */
-    public function wasLocked()
-    {
-        return $this->wasLockedAtInstall;
-    }
 
     /* ------------------------------------------------------------------------------------------------
      |  Main Functions
@@ -203,11 +78,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     public function activate(Composer $composer, IOInterface $io)
     {
-        $this->composer           = $composer;
-        $this->log                = new Log($io);
-        $this->pluginFirstInstall = false;
-        $this->wasLockedAtInstall = false;
-    }
+        $this->composer = $composer;
+        $this->state    = new PluginState($this->composer);
+        $this->logger   = new Logger('merge-plugin', $io);
+}
 
     /**
      * Returns an array of event names this subscriber wants to listen to.
@@ -237,28 +111,17 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     public function onDependencySolve(InstallerEvent $event)
     {
-        if (empty($this->duplicateLinks)) {
-            // @codeCoverageIgnoreStart
-            // We shouldn't really ever be able to get here as this event is triggered
-            // inside Composer\Installer and should have been preceded by a pre-install
-            // or pre-update event but better to have an unneeded check than to break
-            // with some future change in the event system.
-            return;
-            // @codeCoverageIgnoreEnd
-        }
-
         $request = $event->getRequest();
 
-        /** @var Link $link */
         $this->installRequires(
             $request,
-            $this->duplicateLinks['require']
+            $this->state->getDuplicateLinks('require')
         );
 
-        if ($this->devMode) {
+        if ($this->state->isDevMode()) {
             $this->installRequires(
                 $request,
-                $this->duplicateLinks['require-dev'],
+                $this->state->getDuplicateLinks('require-dev'),
                 true
             );
         }
@@ -274,7 +137,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     private function installRequires(Request $request, array $links, $dev = false)
     {
         foreach ($links as $link) {
-            $this->log->debug($dev
+            $this->logger->debug($dev
                 ? "Adding dev dependency <comment>{$link}</comment>"
                 : "Adding dependency <comment>{$link}</comment>"
             );
@@ -286,41 +149,60 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * Handle an event callback for an install or update or dump-autoload command by checking
      * for "merge-patterns" in the "extra" data and merging package contents if found.
      *
-     * @param Event $event
+     * @param  Event $event
      */
     public function onInstallUpdateOrDump(Event $event)
     {
-        $config = Config::read($this->getRootPackage(), self::PLUGIN_KEY);
-
-        if (isset($config['recurse'])) {
-            $this->recurse = (bool) $config['recurse'];
-        }
-
-        if (isset($config['replace'])) {
-            $this->replace = (bool) $config['replace'];
-        }
-
-        if (isset($config['merge-extra'])) {
-            $this->mergeExtra = (bool) $config['merge-extra'];
-        }
-
-        if ($config['include']) {
-            $this->loader         = new ArrayLoader;
-            $this->duplicateLinks = [
-                'require'       => [],
-                'require-dev'   => [],
-            ];
-            $this->devMode = $event->isDevMode();
-            $this->mergePackages($config);
-        }
+        $this->state->loadSettings();
+        $this->state->setDevMode($event->isDevMode());
+        $this->mergeIncludes($this->state->getIncludes());
 
         if ($event->getName() === ScriptEvents::PRE_AUTOLOAD_DUMP) {
-            $this->dumpAutoloader = true;
-            $flags                = $event->getFlags();
+            $this->state->setDumpAutoloader(true);
+            $flags = $event->getFlags();
 
             if (isset($flags['optimize'])) {
-                $this->optimizeAutoloader = $flags['optimize'];
+                $this->state->setOptimizeAutoloader($flags['optimize']);
             }
+        }
+    }
+
+    /**
+     * Find configuration files matching the configured glob patterns and
+     * merge their contents with the master package.
+     *
+     * @param  array $includes List of files/glob patterns
+     */
+    private function mergeIncludes(array $includes)
+    {
+        $root  = $this->state->getRootPackage();
+        $paths = array_reduce(array_map('glob', $includes), 'array_merge', []);
+
+        foreach ($paths as $path) {
+            $this->mergeFile($root, $path);
+        }
+    }
+
+    /**
+     * Read a JSON file and merge its contents
+     *
+     * @param  RootPackage $root
+     * @param  string      $path
+     */
+    private function mergeFile(RootPackage $root, $path)
+    {
+        if (isset($this->loadedFiles[$path])) {
+            $this->logger->debug("Skipping duplicate <comment>$path</comment>...");
+            return;
+        }
+
+        $this->loadedFiles[$path] = true;
+        $this->logger->debug("Loading <comment>{$path}</comment>...");
+        $package = new Package($path, $this->composer, $this->logger);
+        $package->mergeInto($root, $this->state);
+
+        if ($this->state->recurseIncludes()) {
+            $this->mergeIncludes($package->getIncludes());
         }
     }
 
@@ -328,21 +210,23 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * Handle an event callback following installation of a new package by
      * checking to see if the package that was installed was our plugin.
      *
-     * @param PackageEvent $event
+     * @param  PackageEvent $event
      */
     public function onPostPackageInstall(PackageEvent $event)
     {
-        $op       = $event->getOperation();
+        $op = $event->getOperation();
 
         if ($op instanceof InstallOperation) {
             $package = $op->getPackage()->getName();
 
             if ($package === self::PACKAGE_NAME) {
-                $this->log->debug(self::PLUGIN_KEY . ' installed');
-                $this->pluginFirstInstall = true;
-                $this->wasLockedAtInstall = $event->getComposer()->getLocker()->isLocked();
+                $this->logger->debug('Arcanedev composer merge-plugin installed');
+                $this->state->setFirstInstall(true);
+                $this->state->setLocked(
+                    $event->getComposer()->getLocker()->isLocked()
+                );
             }
-         }
+        }
     }
 
     /**
@@ -354,400 +238,36 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     public function onPostInstallOrUpdate(Event $event)
     {
-        if ($this->isFirstInstall()) {
-            $this->pluginFirstInstall = false;
-            $this->log->debug(
+        // @codeCoverageIgnoreStart
+        if ($this->state->isFirstInstall()) {
+            $this->state->setFirstInstall(false);
+            $this->logger->debug(
                 '<comment>Running additional update to apply merge settings</comment>'
             );
-
             $config       = $this->composer->getConfig();
             $preferSource = $config->get('preferred-install') == 'source';
             $preferDist   = $config->get('preferred-install') == 'dist';
-
-            $installer = Installer::create(
+            $installer    = Installer::create(
                 $event->getIO(),
-                // Create a new Composer instance to ensure full processing of the merged files.
+                // Create a new Composer instance to ensure full processing of
+                // the merged files.
                 Factory::create($event->getIO(), null, false)
             );
 
             $installer->setPreferSource($preferSource);
             $installer->setPreferDist($preferDist);
             $installer->setDevMode($event->isDevMode());
-            $installer->setDumpAutoloader($this->dumpAutoloader);
-            $installer->setOptimizeAutoloader($this->optimizeAutoloader);
+            $installer->setDumpAutoloader($this->state->shouldDumpAutoloader());
+            $installer->setOptimizeAutoloader($this->state->shouldOptimizeAutoloader());
 
-            if ( ! $this->wasLocked()) {
-                // Force update mode so that new packages are processed rather than just telling the
-                // user that composer.json and composer.lock don't match.
+            if ($this->state->forceUpdate()) {
+                // Force update mode so that new packages are processed rather than just telling
+                // the user that composer.json and composer.lock don't match.
                 $installer->setUpdate(true);
             }
 
             $installer->run();
         }
-    }
-
-    /* ------------------------------------------------------------------------------------------------
-     |  Other Functions
-     | ------------------------------------------------------------------------------------------------
-     */
-    /**
-     * Find configuration files matching the configured glob patterns and
-     * merge their contents with the master package.
-     *
-     * @param array $config
-     */
-    private function mergePackages(array $config)
-    {
-        $root   = $this->getRootPackage();
-        $paths  = array_reduce(
-            array_map('glob', $config['include']),
-            'array_merge',
-            []
-        );
-
-        foreach ($paths as $path) {
-            $this->loadFile($root, $path);
-        }
-    }
-
-    /**
-     * Read a JSON file and merge its contents
-     *
-     * @param RootPackage $root
-     * @param string      $path
-     */
-    private function loadFile(RootPackage $root, $path)
-    {
-        if (in_array($path, $this->loadedFiles)) {
-            $this->log->debug("Skipping duplicate <comment>{$path}</comment>...");
-            return;
-        }
-        else {
-            $this->loadedFiles[] = $path;
-        }
-
-        $this->log->debug("Loading <comment>{$path}</comment>...");
-        $json    = $this->readPackageJson($path);
-        $package = $this->jsonToPackage($json);
-
-        $this->mergeRequires($root, $package);
-        $this->mergeDevRequires($root, $package);
-        $this->mergeExtraSection($root, $package);
-        $this->mergeAutoload($root, $package, $path);
-        $this->mergeDevAutoload($root, $package, $path);
-        $this->addRepositories($root, $json);
-        $this->mergeSuggests($root, $package);
-        $this->addExtras($json);
-    }
-
-    /**
-     * Read the contents of a composer.json style file into an array.
-     *
-     * @param  string $path
-     *
-     * @return array
-     */
-    private function readPackageJson($path)
-    {
-        return (new Package($path))->read();
-    }
-
-    /**
-     * Merge required packages
-     *
-     * @param RootPackage     $root
-     * @param CompletePackage $package
-     */
-    private function mergeRequires(RootPackage $root, CompletePackage $package)
-    {
-        $requires = $package->getRequires();
-
-        if ( ! empty($requires)) {
-            $this->mergeStabilityFlags($root, $requires);
-
-            $root->setRequires($this->mergeLinks(
-                $root->getRequires(),
-                $requires,
-                $this->duplicateLinks['require']
-            ));
-        }
-    }
-
-    /**
-     * Merge required dev packages
-     *
-     * @param RootPackage     $root
-     * @param CompletePackage $package
-     */
-    private function mergeDevRequires(RootPackage $root, CompletePackage $package)
-    {
-        $requires = $package->getDevRequires();
-
-        if ( ! empty($requires)) {
-            $this->mergeStabilityFlags($root, $requires);
-
-            $root->setDevRequires($this->mergeLinks(
-                $root->getDevRequires(),
-                $requires,
-                $this->duplicateLinks['require-dev']
-            ));
-        }
-    }
-
-    /**
-     * Merge two collections of package links and collect duplicates for
-     * subsequent processing.
-     *
-     * @param  array $origin Primary collection
-     * @param  array $merge  Additional collection
-     * @param  array &$dups  Duplicate storage
-     *
-     * @return array
-     */
-    private function mergeLinks(array $origin, array $merge, array &$dups)
-    {
-        /** @var Link $link */
-        foreach ($merge as $name => $link) {
-            if ( ! isset($origin[$name]) || $this->replace) {
-                $this->log->debug("Merging <comment>{$name}</comment>");
-                $origin[$name] = $link;
-            }
-            else {
-                // Defer to solver.
-                $this->log->debug("Deferring duplicate <comment>{$name}</comment>");
-                $dups[] = $link;
-            }
-        }
-
-        return $origin;
-    }
-
-    /**
-     * Merge the extra sections of two config files.
-     *
-     * @param RootPackage     $root    The root package.
-     * @param CompletePackage $package The imported package to merge.
-     */
-    public function mergeExtraSection(RootPackage $root, CompletePackage $package)
-    {
-        if ( ! $this->mergeExtra) {
-            return;
-        }
-
-        $this->log->debug('Merging extra section');
-
-        $packageExtra = $package->getExtra();
-
-        if ( ! empty($packageExtra)) {
-            if (isset($packageExtra['merge-plugin'])) {
-                $this->log->debug('Skipping merge-plugin key');
-                unset($packageExtra['merge-plugin']);
-            }
-
-            $rootExtra = $root->getExtra();
-            foreach ($packageExtra as $key => $value) {
-                if (isset($rootExtra[$key]) && ! $this->replace) {
-                    $name = substr($package->getPrettyName(), 13);
-                    $msg  = "Duplicate key <comment>{$key}</comment> in extra section " .
-                        "of imported config <comment>{$name}</comment> will be ignored.";
-                }
-                else {
-                    $msg = "Merging extra key <comment>{$key}</comment>";
-                }
-
-                $this->log->debug($msg);
-            }
-
-            $extras = $this->replace
-                // With array_merge, keys in the $packageExtra array will replace those in $rootExtra
-                ? array_merge($rootExtra, $packageExtra)
-                // With '+', keys in the $packageExtra array will be skipped if the key exists in $rootExtra
-                : $rootExtra + $packageExtra;
-
-            $root->setExtra($extras);
-        }
-    }
-
-    /**
-     * Extract and merge stability flags from the given collection of requires.
-     *
-     * @param RootPackage $root
-     * @param array       $requires
-     */
-    private function mergeStabilityFlags(RootPackage $root, array $requires)
-    {
-        $flags = $root->getStabilityFlags();
-
-        /** @var Link $link */
-        foreach ($requires as $name => $link) {
-            $name         = strtolower($name);
-            $version      = $link->getPrettyConstraint();
-            $stability    = VersionParser::parseStability($version);
-            $flags[$name] = BasePackage::$stabilities[$stability];
-        }
-
-        $root->setStabilityFlags($flags);
-    }
-
-    /**
-     * Merge autoload
-     *
-     * @param RootPackage     $root
-     * @param CompletePackage $package
-     * @param string          $path
-     */
-    private function mergeAutoload(RootPackage $root, CompletePackage $package, $path)
-    {
-        $autoloads = $package->getAutoload();
-
-        if (empty($autoloads)) {
-            return;
-        }
-
-        $this->prependPath($path, $autoloads);
-
-        $root->setAutoload(array_merge_recursive(
-            $root->getAutoload(),
-            $autoloads
-        ));
-    }
-
-    /**
-     * Merge dev autoload
-     *
-     * @param RootPackage     $root
-     * @param CompletePackage $package
-     * @param string          $path
-     */
-    private function mergeDevAutoload(RootPackage $root, CompletePackage $package, $path)
-    {
-        $devAutoloads = $package->getDevAutoload();
-
-        if (empty($devAutoloads)) {
-            return;
-        }
-
-        $this->prependPath($path, $devAutoloads);
-
-        $root->setDevAutoload(array_merge_recursive(
-            $root->getDevAutoload() ?: [],
-            $devAutoloads
-        ));
-    }
-
-    /**
-     * Merge package suggests
-     *
-     * @param RootPackage     $root
-     * @param CompletePackage $package
-     */
-    private function mergeSuggests(RootPackage $root, CompletePackage $package)
-    {
-        if ($package->getSuggests()) {
-            $root->setSuggests(
-                array_merge($root->getSuggests(), $package->getSuggests())
-            );
-        }
-    }
-
-    /**
-     * Add package extras
-     *
-     * @param array $json
-     */
-    private function addExtras(array $json)
-    {
-        if ($this->recurse && isset($json['extra'][self::PLUGIN_KEY])) {
-            $this->mergePackages($json['extra'][self::PLUGIN_KEY]);
-        }
-    }
-
-    /**
-     * Add a collection of repositories described by the given configuration
-     * to the given package and the global repository manager.
-     *
-     * @param RootPackage $root
-     * @param array       $json
-     */
-    private function addRepositories(RootPackage $root, array $json)
-    {
-        if ( ! isset($json['repositories'])) {
-            return;
-        }
-
-        $repoManager     = $this->composer->getRepositoryManager();
-        $newRepositories = array_map(function($repoJson) use ($repoManager) {
-            return $this->createRepository($repoManager, $repoJson);
-        }, $json['repositories']);
-
-        $root->setRepositories(array_merge(
-            array_filter($newRepositories),
-            $root->getRepositories()
-        ));
-    }
-
-    /**
-     * Create repository
-     *
-     * @param  RepositoryManager $repoManager
-     * @param  array             $json
-     *
-     * @return \Composer\Repository\RepositoryInterface
-     */
-    private function createRepository(RepositoryManager &$repoManager, array $json)
-    {
-        if ( ! isset($json['type'])) {
-            return null;
-        }
-
-        $this->log->debug("Adding {$json['type']} repository");
-        $repo = $repoManager->createRepository($json['type'], $json);
-        $repoManager->addRepository($repo);
-
-        return $repo;
-    }
-
-    /* ------------------------------------------------------------------------------------------------
-     |  Other Functions
-     | ------------------------------------------------------------------------------------------------
-     */
-    /**
-     * Convert the json array to package object
-     *
-     * @param  array $json
-     *
-     * @return CompletePackage
-     */
-    private function jsonToPackage($json)
-    {
-        $package = $this->loader->load($json);
-
-        if ( ! $package instanceof CompletePackage) {
-            // @codeCoverageIgnoreStart
-            throw new UnexpectedValueException(
-                'Expected instance of CompletePackage, got ' . get_class($package)
-            );
-            // @codeCoverageIgnoreEnd
-        }
-
-        return $package;
-    }
-
-    /**
-     * Prepend a path to a collection of autoloads.
-     *
-     * @param string $basePath
-     * @param array  $autoloads
-     */
-    public function prependPath($basePath, array &$autoloads)
-    {
-        $basePath = substr($basePath, 0, strrpos($basePath, '/') + 1);
-
-        array_walk_recursive(
-            $autoloads,
-            function(&$path) use ($basePath) {
-                $path = $basePath . $path;
-            }
-        );
+        // @codeCoverageIgnoreEnd
     }
 }

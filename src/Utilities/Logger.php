@@ -1,50 +1,39 @@
-<?php namespace Arcanedev\Composer\Helpers;
+<?php namespace Arcanedev\Composer\Utilities;
 
 use Composer\IO\IOInterface;
 
 /**
- * Class Log
+ * Class Logger
  * @package Arcanedev\Composer\Helpers
  */
-class Log
+class Logger
 {
     /* ------------------------------------------------------------------------------------------------
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
     /**
+     * @var string $name
+     */
+    protected $name;
+
+    /**
      * @var IOInterface $io
      */
     protected $io;
-
-    /* ------------------------------------------------------------------------------------------------
-     |  Getters & Setters
-     | ------------------------------------------------------------------------------------------------
-     */
-    /**
-     * Set the IO
-     *
-     * @param  IOInterface $io
-     *
-     * @return self
-     */
-    public function setIO(IOInterface $io)
-    {
-        $this->io = $io;
-
-        return $this;
-    }
 
     /* ------------------------------------------------------------------------------------------------
      |  Constructor
      | ------------------------------------------------------------------------------------------------
      */
     /**
+     * @param string      $name
      * @param IOInterface $io
      */
-    public function __construct(IOInterface $io)
+    public function __construct($name, IOInterface $io)
     {
-        $this->setIO($io);
+        $this->name = $name;
+        $this->io   = $io;
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -52,7 +41,7 @@ class Log
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Log a debug message
+     * Logger a debug message
      *
      * Messages will be output at the "verbose" logging level
      * (eg `-v` needed on the Composer command).
@@ -61,18 +50,18 @@ class Log
      */
     public function debug($message)
     {
-        // @codeCoverageIgnoreStart
         if ($this->io->isVerbose()) {
-            $message = "  <info>[merge]</info> {$message}";
+            $message = "  <info>[{$this->name}]</info> {$message}";
 
             if (method_exists($this->io, 'writeError')) {
                 $this->io->writeError($message);
             }
             else {
+                // @codeCoverageIgnoreStart
                 // Backwards compatibility for Composer before cb336a5
                 $this->io->write($message);
+                // @codeCoverageIgnoreEnd
             }
         }
-        // @codeCoverageIgnoreEnd
     }
 }

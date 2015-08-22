@@ -1,6 +1,7 @@
 <?php namespace Arcanedev\Composer\Tests;
 
 use Arcanedev\Composer\ComposerPlugin;
+use Arcanedev\Composer\Entities\PluginState;
 use Composer\Composer;
 use Composer\DependencyResolver\Operation\InstallOperation;
 use Composer\Installer\InstallerEvent;
@@ -12,7 +13,7 @@ use Composer\Package\RootPackage;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Prophecy\Argument;
-use ReflectionMethod;
+use ReflectionProperty;
 
 /**
  * Class ComposerPluginTest
@@ -338,8 +339,8 @@ class ComposerPluginTest extends TestCase
         $root   = $this->rootFromJson("{$dir}/composer.json");
 
         $root->getAutoload()->shouldBeCalled();
-        $root->getDevAutoload()->shouldBeCalled();
         $root->getRequires()->shouldNotBeCalled();
+        $root->getDevAutoload()->willReturn([]);
         $root->setAutoload(Argument::type('array'))->will(
             function ($args) use ($that) {
                 $that->assertEquals(
@@ -524,8 +525,8 @@ class ComposerPluginTest extends TestCase
 
         $this->plugin->onPostPackageInstall($event->reveal());
 
-        $this->assertEquals($first,  $this->plugin->isFirstInstall());
-        $this->assertEquals($locked, $this->plugin->wasLocked());
+        $this->assertEquals($first,  $this->getState()->isFirstInstall());
+        $this->assertEquals($locked, $this->getState()->isLocked());
     }
 
     /**
@@ -571,13 +572,7 @@ class ComposerPluginTest extends TestCase
 
         $this->triggerPlugin($alias->reveal(), $dir);
 
-        $getRootPackage = new ReflectionMethod(
-            get_class($this->plugin),
-            'getRootPackage'
-        );
-        $getRootPackage->setAccessible(true);
-
-        $this->assertEquals($root, $getRootPackage->invoke($this->plugin));
+        $this->assertEquals($root, $this->getState()->getRootPackage());
     }
 
     /**
@@ -627,6 +622,20 @@ class ComposerPluginTest extends TestCase
      |  Other Functions
      | ------------------------------------------------------------------------------------------------
      */
+    /**
+     * @return PluginState
+     */
+    protected function getState()
+    {
+        $state = new ReflectionProperty(
+            get_class($this->plugin),
+            'state'
+        );
+        $state->setAccessible(true);
+
+        return $state->getValue($this->plugin);
+    }
+
     /**
      * Trigger the composer plugin
      *
