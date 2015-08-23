@@ -3,7 +3,6 @@
 use Composer\Package\BasePackage;
 use Prophecy\Argument;
 use Prophecy\PhpUnit\ProphecyTestCase;
-use Prophecy\Prophecy\ObjectProphecy;
 
 /**
  * Class TestCase
