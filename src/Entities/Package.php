@@ -9,6 +9,7 @@ use Composer\Package\Link;
 use Composer\Package\Loader\ArrayLoader;
 use Composer\Package\RootPackage;
 use Composer\Package\Version\VersionParser;
+use Composer\Repository\RepositoryManager;
 use UnexpectedValueException;
 
 /**
@@ -51,9 +52,9 @@ class Package
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * @param string   $path     Path to composer.json file
-     * @param Composer $composer
-     * @param Logger   $logger
+     * @param  string   $path     Path to composer.json file
+     * @param  Composer $composer
+     * @param  Logger   $logger
      */
     public function __construct($path, Composer $composer, Logger $logger)
     {
@@ -87,8 +88,8 @@ class Package
     /**
      * Merge this package into a RootPackage
      *
-     * @param RootPackage $root
-     * @param PluginState $state
+     * @param  RootPackage $root
+     * @param  PluginState $state
      */
     public function mergeInto(RootPackage $root, PluginState $state)
     {
@@ -108,8 +109,8 @@ class Package
     /**
      * Merge require into a RootPackage
      *
-     * @param RootPackage $root
-     * @param PluginState $state
+     * @param  RootPackage $root
+     * @param  PluginState $state
      */
     private function mergeRequires(RootPackage $root, PluginState $state)
     {
@@ -136,8 +137,8 @@ class Package
     /**
      * Merge require-dev into RootPackage
      *
-     * @param RootPackage $root
-     * @param PluginState $state
+     * @param  RootPackage $root
+     * @param  PluginState $state
      */
     private function mergeDevRequires(RootPackage $root, PluginState $state)
     {
@@ -169,7 +170,7 @@ class Package
      * @param  bool  $replace         Replace exising links?
      * @param  array $duplicateLinks  Duplicate storage
      *
-     * @return array Merged collection
+     * @return array                  Merged collection
      */
     private function mergeLinks(array $origin, array $merge, $replace, array &$duplicateLinks)
     {
@@ -191,7 +192,7 @@ class Package
     /**
      * Merge autoload into a RootPackage
      *
-     * @param RootPackage $root
+     * @param  RootPackage $root
      */
     protected function mergeAutoload(RootPackage $root)
     {
@@ -209,7 +210,7 @@ class Package
     /**
      * Merge autoload-dev into a RootPackage
      *
-     * @param RootPackage $root
+     * @param  RootPackage $root
      */
     protected function mergeDevAutoload(RootPackage $root)
     {
@@ -227,8 +228,8 @@ class Package
     /**
      * Prepend a path to a collection of paths.
      *
-     * @param string $basePath
-     * @param array $paths
+     * @param  string $basePath
+     * @param  array  $paths
      */
     protected function prependPath($basePath, array &$paths)
     {
@@ -243,8 +244,8 @@ class Package
      * Extract and merge stability flags from the given collection of
      * requires and merge them into a RootPackage
      *
-     * @param RootPackage $root
-     * @param array $requires
+     * @param  RootPackage $root
+     * @param  array       $requires
      */
     protected function mergeStabilityFlags(RootPackage $root, array $requires)
     {
@@ -265,11 +266,11 @@ class Package
      * Add a collection of repositories described by the given configuration
      * to the given package and the global repository manager.
      *
-     * @param RootPackage $root
+     * @param  RootPackage $root
      */
     protected function addRepositories(RootPackage $root)
     {
-        if ( ! isset($this->json['repositories'])) {
+        if ( ! $this->hasRepositories()) {
             return;
         }
 
@@ -277,27 +278,41 @@ class Package
         $newRepos    = [];
 
         foreach ($this->json['repositories'] as $repoJson) {
-            if ( ! isset($repoJson['type'])) {
-                continue;
-            }
-
-            $this->logger->debug("Adding {$repoJson['type']} repository");
-            $repo = $repoManager->createRepository(
-                $repoJson['type'],
-                $repoJson
-            );
-            $repoManager->addRepository($repo);
-            $newRepos[] = $repo;
+            $this->addRepository($newRepos, $repoManager, $repoJson);
         }
 
         $root->setRepositories(array_merge($newRepos, $root->getRepositories()));
     }
 
     /**
+     * Add repository to collection
+     *
+     * @param  array             $newRepos
+     * @param  RepositoryManager $repoManager
+     * @param  array             $repoJson
+     */
+    private function addRepository(array &$newRepos, RepositoryManager $repoManager, array $repoJson)
+    {
+        if ( ! isset($repoJson['type'])) {
+            return;
+        }
+
+        $this->logger->debug("Adding {$repoJson['type']} repository");
+
+        $repository = $repoManager->createRepository(
+            $repoJson['type'],
+            $repoJson
+        );
+        $repoManager->addRepository($repository);
+
+        $newRepos[] = $repository;
+    }
+
+    /**
      * Merge extra config into a RootPackage
      *
-     * @param RootPackage $root
-     * @param PluginState $state
+     * @param  RootPackage $root
+     * @param  PluginState $state
      */
     public function mergeExtra(RootPackage $root, PluginState $state)
     {
@@ -309,28 +324,21 @@ class Package
         }
 
         $rootExtra = $root->getExtra();
+        $replace   = $state->replaceDuplicateLinks();
 
-        if ($state->replaceDuplicateLinks()) {
-            $root->setExtra(array_merge($rootExtra, $extra));
+        if ( ! $replace) {
+            $this->logDuplicatedExtras($rootExtra, $extra);
         }
-        else {
-            foreach ($extra as $key => $value) {
-                if (isset($rootExtra[$key])) {
-                    $this->logger->debug(
-                        "Ignoring duplicate <comment>{$key}</comment> in ".
-                        "<comment>{$this->path}</comment> extra config."
-                    );
-                }
-            }
 
-            $root->setExtra(array_merge($extra, $rootExtra));
-        }
+        $root->setExtra(
+            $replace ? array_merge($rootExtra, $extra) : array_merge($extra, $rootExtra)
+        );
     }
 
     /**
      * Merge suggested packages into a RootPackage
      *
-     * @param RootPackage $root
+     * @param  RootPackage $root
      */
     protected function mergeSuggests(RootPackage $root)
     {
@@ -339,6 +347,20 @@ class Package
         if ( ! empty($suggests)) {
             $root->setSuggests(array_merge($root->getSuggests(), $suggests));
         }
+    }
+
+    /* ------------------------------------------------------------------------------------------------
+     |  Check Functions
+     | ------------------------------------------------------------------------------------------------
+     */
+    /**
+     * Check if package has repositories
+     *
+     * @return bool
+     */
+    private function hasRepositories()
+    {
+        return isset($this->json['repositories']);
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -392,5 +414,23 @@ class Package
         // @codeCoverageIgnoreEnd
 
         return $package;
+    }
+
+    /**
+     * Log the duplicated extras
+     *
+     * @param  array $rootExtra
+     * @param  array $extra
+     */
+    private function logDuplicatedExtras(array $rootExtra, array $extra)
+    {
+        foreach ($extra as $key => $value) {
+            if (isset($rootExtra[$key])) {
+                $this->logger->debug(
+                    "Ignoring duplicate <comment>{$key}</comment> in ".
+                    "<comment>{$this->path}</comment> extra config."
+                );
+            }
+        }
     }
 }
