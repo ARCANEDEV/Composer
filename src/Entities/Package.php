@@ -341,13 +341,14 @@ class Package
         $rootExtra = $root->getExtra();
         $replace   = $state->replaceDuplicateLinks();
 
-        if ( ! $replace) {
-            $this->logDuplicatedExtras($rootExtra, $extra);
+
+        if ($replace) {
+            $root->setExtra(array_merge($rootExtra, $extra));
+            return;
         }
 
-        $root->setExtra(
-            $replace ? array_merge($rootExtra, $extra) : array_merge($extra, $rootExtra)
-        );
+        $this->logDuplicatedExtras($rootExtra, $extra);
+        $root->setExtra(array_merge($extra, $rootExtra));
     }
 
     /**
