@@ -175,18 +175,33 @@ class Package
     private function mergeLinks(array $origin, array $merge, $replace, array &$duplicateLinks)
     {
         foreach ($merge as $name => $link) {
-            if ( ! isset($origin[$name]) || $replace) {
-                $this->logger->debug("Merging <comment>{$name}</comment>");
-                $origin[$name] = $link;
-            }
-            else {
-                // Defer to solver.
-                $this->logger->debug("Deferring duplicate <comment>{$name}</comment>");
-                $duplicateLinks[] = $link;
-            }
+            $this->mergeLink($origin,$replace, $duplicateLinks, $name, $link);
         }
 
         return $origin;
+    }
+
+    /**
+     * Merge or collect duplicated link.
+     *
+     * @param  array  $origin
+     * @param  bool   $replace
+     * @param  array  $duplicateLinks
+     * @param  string $name
+     * @param  string $link
+     */
+    private function mergeLink(array &$origin, $replace, array &$duplicateLinks, $name, $link)
+    {
+        if ( ! isset($origin[$name]) || $replace) {
+            $this->logger->debug("Merging <comment>{$name}</comment>");
+            $origin[$name] = $link;
+
+            return;
+        }
+
+        // Defer to solver.
+        $this->logger->debug("Deferring duplicate <comment>{$name}</comment>");
+        $duplicateLinks[] = $link;
     }
 
     /**
