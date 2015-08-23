@@ -172,33 +172,18 @@ class Package
     private function mergeLinks(array $origin, array $merge, $replace, array &$duplicateLinks)
     {
         foreach ($merge as $name => $link) {
-            $this->mergeLink($origin,$replace, $duplicateLinks, $name, $link);
+            if ( ! isset($origin[$name]) || $replace) {
+                $this->logger->debug("Merging <comment>{$name}</comment>");
+                $origin[$name] = $link;
+            }
+            else {
+                // Defer to solver.
+                $this->logger->debug("Deferring duplicate <comment>{$name}</comment>");
+                $duplicateLinks[] = $link;
+            }
         }
 
         return $origin;
-    }
-
-    /**
-     * Merge or collect duplicated link.
-     *
-     * @param  array  $origin
-     * @param  bool   $replace
-     * @param  array  $duplicateLinks
-     * @param  string $name
-     * @param  string $link
-     */
-    private function mergeLink(array &$origin, $replace, array &$duplicateLinks, $name, $link)
-    {
-        if ( ! isset($origin[$name]) || $replace) {
-            $this->logger->debug("Merging <comment>{$name}</comment>");
-            $origin[$name] = $link;
-
-            return;
-        }
-
-        // Defer to solver.
-        $this->logger->debug("Deferring duplicate <comment>{$name}</comment>");
-        $duplicateLinks[] = $link;
     }
 
     /**
@@ -269,7 +254,7 @@ class Package
      */
     private function addRepositories(RootPackage $root)
     {
-        if ( ! $this->hasRepositories()) {
+        if ( ! isset($this->json['repositories'])) {
             return;
         }
 
@@ -365,19 +350,5 @@ class Package
         if ( ! empty($suggests)) {
             $root->setSuggests(array_merge($root->getSuggests(), $suggests));
         }
-    }
-
-    /* ------------------------------------------------------------------------------------------------
-     |  Check Functions
-     | ------------------------------------------------------------------------------------------------
-     */
-    /**
-     * Check if package has repositories
-     *
-     * @return bool
-     */
-    private function hasRepositories()
-    {
-        return isset($this->json['repositories']);
     }
 }
