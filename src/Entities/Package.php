@@ -2,15 +2,12 @@
 
 use Arcanedev\Composer\Utilities\Logger;
 use Composer\Composer;
-use Composer\Json\JsonFile;
 use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
 use Composer\Package\Link;
-use Composer\Package\Loader\ArrayLoader;
 use Composer\Package\RootPackage;
 use Composer\Package\Version\VersionParser;
 use Composer\Repository\RepositoryManager;
-use UnexpectedValueException;
 
 /**
  * Class Package
@@ -61,8 +58,8 @@ class Package
         $this->path     = $path;
         $this->composer = $composer;
         $this->logger   = $logger;
-        $this->json     = $this->readPackageJson($path);
-        $this->package  = $this->loadPackage($this->json);
+        $this->json     = PackageJson::read($path);
+        $this->package  = PackageJson::convert($this->json);
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -209,7 +206,7 @@ class Package
      *
      * @param  RootPackage $root
      */
-    protected function mergeAutoload(RootPackage $root)
+    private function mergeAutoload(RootPackage $root)
     {
         $autoload = $this->package->getAutoload();
 
@@ -217,9 +214,10 @@ class Package
             return;
         }
 
-        $this->prependPath($this->path, $autoload);
-
-        $root->setAutoload(array_merge_recursive($root->getAutoload(), $autoload));
+        $root->setAutoload(array_merge_recursive(
+            $root->getAutoload(),
+            paths_prepend($this->path, $autoload)
+        ));
     }
 
     /**
@@ -227,7 +225,7 @@ class Package
      *
      * @param  RootPackage $root
      */
-    protected function mergeDevAutoload(RootPackage $root)
+    private function mergeDevAutoload(RootPackage $root)
     {
         $autoload = $this->package->getDevAutoload();
 
@@ -235,24 +233,10 @@ class Package
             return;
         }
 
-        $this->prependPath($this->path, $autoload);
-
-        $root->setDevAutoload(array_merge_recursive($root->getDevAutoload(), $autoload));
-    }
-
-    /**
-     * Prepend a path to a collection of paths.
-     *
-     * @param  string $basePath
-     * @param  array  $paths
-     */
-    protected function prependPath($basePath, array &$paths)
-    {
-        $basePath = substr($basePath, 0, strrpos($basePath, '/') + 1);
-
-        array_walk_recursive($paths, function (&$localPath) use ($basePath) {
-            $localPath = $basePath . $localPath;
-        });
+        $root->setDevAutoload(array_merge_recursive(
+            $root->getDevAutoload(),
+            paths_prepend($this->path, $autoload)
+        ));
     }
 
     /**
@@ -262,7 +246,7 @@ class Package
      * @param  RootPackage $root
      * @param  array       $requires
      */
-    protected function mergeStabilityFlags(RootPackage $root, array $requires)
+    private function mergeStabilityFlags(RootPackage $root, array $requires)
     {
         $flags = $root->getStabilityFlags();
 
@@ -283,7 +267,7 @@ class Package
      *
      * @param  RootPackage $root
      */
-    protected function addRepositories(RootPackage $root)
+    private function addRepositories(RootPackage $root)
     {
         if ( ! $this->hasRepositories()) {
             return;
@@ -329,7 +313,7 @@ class Package
      * @param  RootPackage $root
      * @param  PluginState $state
      */
-    public function mergeExtra(RootPackage $root, PluginState $state)
+    private function mergeExtra(RootPackage $root, PluginState $state)
     {
         $extra = $this->package->getExtra();
         unset($extra['merge-plugin']);
@@ -344,11 +328,29 @@ class Package
 
         if ($replace) {
             $root->setExtra(array_merge($rootExtra, $extra));
-            return;
         }
+        else {
+            $this->logDuplicatedExtras($rootExtra, $extra);
+            $root->setExtra(array_merge($extra, $rootExtra));
+        }
+    }
 
-        $this->logDuplicatedExtras($rootExtra, $extra);
-        $root->setExtra(array_merge($extra, $rootExtra));
+    /**
+     * Log the duplicated extras
+     *
+     * @param  array $rootExtra
+     * @param  array $extra
+     */
+    private function logDuplicatedExtras(array $rootExtra, array $extra)
+    {
+        foreach ($extra as $key => $value) {
+            if (isset($rootExtra[$key])) {
+                $this->logger->debug(
+                    "Ignoring duplicate <comment>{$key}</comment> in ".
+                    "<comment>{$this->path}</comment> extra config."
+                );
+            }
+        }
     }
 
     /**
@@ -356,7 +358,7 @@ class Package
      *
      * @param  RootPackage $root
      */
-    protected function mergeSuggests(RootPackage $root)
+    private function mergeSuggests(RootPackage $root)
     {
         $suggests = $this->package->getSuggests();
 
@@ -377,76 +379,5 @@ class Package
     private function hasRepositories()
     {
         return isset($this->json['repositories']);
-    }
-
-    /* ------------------------------------------------------------------------------------------------
-     |  Other Functions
-     | ------------------------------------------------------------------------------------------------
-     */
-    /**
-     * Read the contents of a composer.json style file into an array.
-     *
-     * The package contents are fixed up to be usable to create a Package object
-     * by providing dummy "name" and "version" values if they have not been provided in the file.
-     * This is consistent with the default root package loading behavior of Composer.
-     *
-     * @param  string $path
-     *
-     * @return array
-     */
-    protected function readPackageJson($path)
-    {
-        $file = new JsonFile($path);
-        $json = $file->read();
-
-        if ( ! isset($json['name'])) {
-            $json['name'] = 'merge-plugin/' . strtr($path, DIRECTORY_SEPARATOR, '-');
-        }
-
-        if ( ! isset($json['version'])) {
-            $json['version'] = '1.0.0';
-        }
-
-        return $json;
-    }
-
-    /**
-     * Load the package
-     *
-     * @return CompletePackage
-     */
-    protected function loadPackage($json)
-    {
-        $loader  = new ArrayLoader;
-        $package = $loader->load($json);
-
-        // @codeCoverageIgnoreStart
-        if ( ! $package instanceof CompletePackage) {
-            throw new UnexpectedValueException(
-                'Expected instance of CompletePackage, got ' .
-                get_class($package)
-            );
-        }
-        // @codeCoverageIgnoreEnd
-
-        return $package;
-    }
-
-    /**
-     * Log the duplicated extras
-     *
-     * @param  array $rootExtra
-     * @param  array $extra
-     */
-    private function logDuplicatedExtras(array $rootExtra, array $extra)
-    {
-        foreach ($extra as $key => $value) {
-            if (isset($rootExtra[$key])) {
-                $this->logger->debug(
-                    "Ignoring duplicate <comment>{$key}</comment> in ".
-                    "<comment>{$this->path}</comment> extra config."
-                );
-            }
-        }
     }
 }
