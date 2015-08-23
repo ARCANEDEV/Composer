@@ -193,6 +193,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     {
         if (isset($this->loadedFiles[$path])) {
             $this->logger->debug("Skipping duplicate <comment>$path</comment>...");
+
             return;
         }
 
@@ -234,7 +235,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * plugin was installed during the run then trigger an update command to
      * process any merge-patterns in the current config.
      *
-     * @param Event $event
+     * @param  Event $event
      */
     public function onPostInstallOrUpdate(Event $event)
     {
