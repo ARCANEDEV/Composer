@@ -1,6 +1,7 @@
 <?php namespace Arcanedev\Composer\Entities;
 
 use Arcanedev\Composer\Utilities\Logger;
+use Arcanedev\Composer\Utilities\Util;
 use Composer\Composer;
 use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
@@ -49,9 +50,9 @@ class Package
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * @param  string   $path     Path to composer.json file
-     * @param  Composer $composer
-     * @param  Logger   $logger
+     * @param  string    $path     Path to composer.json file
+     * @param  Composer  $composer
+     * @param  Logger    $logger
      */
     public function __construct($path, Composer $composer, Logger $logger)
     {
@@ -85,8 +86,8 @@ class Package
     /**
      * Merge this package into a RootPackage
      *
-     * @param  RootPackage $root
-     * @param  PluginState $state
+     * @param  RootPackage  $root
+     * @param  PluginState  $state
      */
     public function mergeInto(RootPackage $root, PluginState $state)
     {
@@ -134,8 +135,8 @@ class Package
     /**
      * Merge require-dev into RootPackage
      *
-     * @param  RootPackage $root
-     * @param  PluginState $state
+     * @param  RootPackage  $root
+     * @param  PluginState  $state
      */
     private function mergeDevRequires(RootPackage $root, PluginState $state)
     {
@@ -162,12 +163,12 @@ class Package
     /**
      * Merge two collections of package links and collect duplicates for subsequent processing.
      *
-     * @param  array $origin          Primary collection
-     * @param  array $merge           Additional collection
-     * @param  bool  $replace         Replace exising links?
-     * @param  array $duplicateLinks  Duplicate storage
+     * @param  array  $origin          Primary collection
+     * @param  array  $merge           Additional collection
+     * @param  bool   $replace         Replace exising links?
+     * @param  array  $duplicateLinks  Duplicate storage
      *
-     * @return array                  Merged collection
+     * @return array                   Merged collection
      */
     private function mergeLinks(array $origin, array $merge, $replace, array &$duplicateLinks)
     {
@@ -189,7 +190,7 @@ class Package
     /**
      * Merge autoload into a RootPackage
      *
-     * @param  RootPackage $root
+     * @param  RootPackage  $root
      */
     private function mergeAutoload(RootPackage $root)
     {
@@ -201,14 +202,14 @@ class Package
 
         $root->setAutoload(array_merge_recursive(
             $root->getAutoload(),
-            paths_prepend($this->path, $autoload)
+            Util::prependPaths($this->path, $autoload)
         ));
     }
 
     /**
      * Merge autoload-dev into a RootPackage
      *
-     * @param  RootPackage $root
+     * @param  RootPackage  $root
      */
     private function mergeDevAutoload(RootPackage $root)
     {
@@ -220,7 +221,7 @@ class Package
 
         $root->setDevAutoload(array_merge_recursive(
             $root->getDevAutoload(),
-            paths_prepend($this->path, $autoload)
+            Util::prependPaths($this->path, $autoload)
         ));
     }
 
@@ -228,8 +229,8 @@ class Package
      * Extract and merge stability flags from the given collection of
      * requires and merge them into a RootPackage
      *
-     * @param  RootPackage $root
-     * @param  array       $requires
+     * @param  RootPackage  $root
+     * @param  array        $requires
      */
     private function mergeStabilityFlags(RootPackage $root, array $requires)
     {
@@ -250,7 +251,7 @@ class Package
      * Add a collection of repositories described by the given configuration
      * to the given package and the global repository manager.
      *
-     * @param  RootPackage $root
+     * @param  RootPackage  $root
      */
     private function addRepositories(RootPackage $root)
     {
@@ -271,9 +272,9 @@ class Package
     /**
      * Add repository to collection
      *
-     * @param  array             $newRepos
-     * @param  RepositoryManager $repoManager
-     * @param  array             $repoJson
+     * @param  array              $newRepos
+     * @param  RepositoryManager  $repoManager
+     * @param  array              $repoJson
      */
     private function addRepository(array &$newRepos, RepositoryManager $repoManager, array $repoJson)
     {
@@ -295,8 +296,8 @@ class Package
     /**
      * Merge extra config into a RootPackage
      *
-     * @param  RootPackage $root
-     * @param  PluginState $state
+     * @param  RootPackage  $root
+     * @param  PluginState  $state
      */
     private function mergeExtra(RootPackage $root, PluginState $state)
     {
@@ -323,8 +324,8 @@ class Package
     /**
      * Log the duplicated extras
      *
-     * @param  array $rootExtra
-     * @param  array $extra
+     * @param  array  $rootExtra
+     * @param  array  $extra
      */
     private function logDuplicatedExtras(array $rootExtra, array $extra)
     {
@@ -341,7 +342,7 @@ class Package
     /**
      * Merge suggested packages into a RootPackage
      *
-     * @param  RootPackage $root
+     * @param  RootPackage  $root
      */
     private function mergeSuggests(RootPackage $root)
     {
