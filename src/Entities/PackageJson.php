@@ -22,7 +22,7 @@ class PackageJson
      * by providing dummy "name" and "version" values if they have not been provided in the file.
      * This is consistent with the default root package loading behavior of Composer.
      *
-     * @param  string $path
+     * @param  string  $path
      *
      * @return array
      */
@@ -45,7 +45,7 @@ class PackageJson
     /**
      * Convert json to Package
      *
-     * @param  array $json
+     * @param  array  $json
      *
      * @return CompletePackage
      *

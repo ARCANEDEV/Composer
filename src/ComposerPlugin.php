@@ -73,8 +73,8 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Apply plugin modifications to composer
      *
-     * @param Composer    $composer
-     * @param IOInterface $io
+     * @param  Composer     $composer
+     * @param  IOInterface  $io
      */
     public function activate(Composer $composer, IOInterface $io)
     {
@@ -107,7 +107,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * initial merge processing to the request that will be processed by the
      * dependency solver.
      *
-     * @param InstallerEvent $event
+     * @param  InstallerEvent  $event
      */
     public function onDependencySolve(InstallerEvent $event)
     {
@@ -130,9 +130,9 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Install requirements
      *
-     * @param Request $request
-     * @param Link[]  $links
-     * @param bool    $dev
+     * @param  Request  $request
+     * @param  Link[]   $links
+     * @param  bool     $dev
      */
     private function installRequires(Request $request, array $links, $dev = false)
     {
@@ -149,7 +149,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * Handle an event callback for an install or update or dump-autoload command by checking
      * for "merge-patterns" in the "extra" data and merging package contents if found.
      *
-     * @param  Event $event
+     * @param  Event  $event
      */
     public function onInstallUpdateOrDump(Event $event)
     {
@@ -171,7 +171,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * Find configuration files matching the configured glob patterns and
      * merge their contents with the master package.
      *
-     * @param  array $includes List of files/glob patterns
+     * @param  array  $includes  List of files/glob patterns
      */
     private function mergeIncludes(array $includes)
     {
@@ -186,8 +186,8 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Read a JSON file and merge its contents
      *
-     * @param  RootPackage $root
-     * @param  string      $path
+     * @param  RootPackage  $root
+     * @param  string       $path
      */
     private function mergeFile(RootPackage $root, $path)
     {
@@ -211,7 +211,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * Handle an event callback following installation of a new package by
      * checking to see if the package that was installed was our plugin.
      *
-     * @param  PackageEvent $event
+     * @param  PackageEvent  $event
      */
     public function onPostPackageInstall(PackageEvent $event)
     {
@@ -235,40 +235,42 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * plugin was installed during the run then trigger an update command to
      * process any merge-patterns in the current config.
      *
-     * @param  Event $event
+     * @param  Event  $event
      */
     public function onPostInstallOrUpdate(Event $event)
     {
-        // @codeCoverageIgnoreStart
-        if ($this->state->isFirstInstall()) {
-            $this->state->setFirstInstall(false);
-            $this->logger->debug(
-                '<comment>Running additional update to apply merge settings</comment>'
-            );
-            $config       = $this->composer->getConfig();
-            $preferSource = $config->get('preferred-install') == 'source';
-            $preferDist   = $config->get('preferred-install') == 'dist';
-            $installer    = Installer::create(
-                $event->getIO(),
-                // Create a new Composer instance to ensure full processing of
-                // the merged files.
-                Factory::create($event->getIO(), null, false)
-            );
-
-            $installer->setPreferSource($preferSource);
-            $installer->setPreferDist($preferDist);
-            $installer->setDevMode($event->isDevMode());
-            $installer->setDumpAutoloader($this->state->shouldDumpAutoloader());
-            $installer->setOptimizeAutoloader($this->state->shouldOptimizeAutoloader());
-
-            if ($this->state->forceUpdate()) {
-                // Force update mode so that new packages are processed rather than just telling
-                // the user that composer.json and composer.lock don't match.
-                $installer->setUpdate(true);
-            }
-
-            $installer->run();
+        if ( ! $this->state->isFirstInstall()) {
+            return;
         }
+
+        // @codeCoverageIgnoreStart
+        $this->state->setFirstInstall(false);
+        $this->logger->debug(
+            '<comment>Running additional update to apply merge settings</comment>'
+        );
+        $config       = $this->composer->getConfig();
+        $preferSource = $config->get('preferred-install') == 'source';
+        $preferDist   = $config->get('preferred-install') == 'dist';
+        $installer    = Installer::create(
+            $event->getIO(),
+            // Create a new Composer instance to ensure full processing of
+            // the merged files.
+            Factory::create($event->getIO(), null, false)
+        );
+
+        $installer->setPreferSource($preferSource);
+        $installer->setPreferDist($preferDist);
+        $installer->setDevMode($event->isDevMode());
+        $installer->setDumpAutoloader($this->state->shouldDumpAutoloader());
+        $installer->setOptimizeAutoloader($this->state->shouldOptimizeAutoloader());
+
+        if ($this->state->forceUpdate()) {
+            // Force update mode so that new packages are processed rather than just telling
+            // the user that composer.json and composer.lock don't match.
+            $installer->setUpdate(true);
+        }
+
+        $installer->run();
         // @codeCoverageIgnoreEnd
     }
 }

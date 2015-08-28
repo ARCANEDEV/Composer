@@ -83,7 +83,7 @@ class PluginState
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * @param Composer $composer
+     * @param  Composer  $composer
      */
     public function __construct(Composer $composer)
     {
@@ -131,7 +131,7 @@ class PluginState
     /**
      * Set the first install flag
      *
-     * @param  bool $flag
+     * @param  bool  $flag
      *
      * @return self
      */
@@ -155,7 +155,7 @@ class PluginState
     /**
      * Set the locked flag
      *
-     * @param bool $flag
+     * @param  bool  $flag
      *
      * @return self
      */
@@ -179,7 +179,7 @@ class PluginState
     /**
      * Should an update be forced?
      *
-     * @return bool - True if packages are not locked
+     * @return bool  True if packages are not locked
      */
     public function forceUpdate()
     {
@@ -189,7 +189,7 @@ class PluginState
     /**
      * Set the devMode flag
      *
-     * @param  bool $flag
+     * @param  bool  $flag
      *
      * @return self
      */
@@ -213,7 +213,7 @@ class PluginState
     /**
      * Set the dumpAutoloader flag
      *
-     * @param  bool $flag
+     * @param  bool  $flag
      *
      * @return self
      */
@@ -237,7 +237,7 @@ class PluginState
     /**
      * Set the optimizeAutoloader flag
      *
-     * @param  bool $flag
+     * @param  bool  $flag
      *
      * @return self
      */
@@ -261,8 +261,8 @@ class PluginState
     /**
      * Add duplicate packages
      *
-     * @param  string $type     Package type
-     * @param  array  $packages
+     * @param  string  $type      Package type
+     * @param  array   $packages
      *
      * @return self
      */
@@ -283,7 +283,7 @@ class PluginState
     /**
      * Get duplicate packages
      *
-     * @param  string $type Package type
+     * @param  string  $type  Package type
      *
      * @return array
      */
@@ -339,8 +339,29 @@ class PluginState
      */
     public function loadSettings()
     {
-        $extra  = $this->getRootPackage()->getExtra();
-        $config = array_merge(
+        $extra          = $this->getRootPackage()->getExtra();
+        $config         = $this->mergeConfig($extra);
+        $this->includes = is_array($config['include'])
+            ? $config['include']
+            : [
+                $config['include']
+            ];
+
+        $this->recurse    = (bool) $config['recurse'];
+        $this->replace    = (bool) $config['replace'];
+        $this->mergeExtra = (bool) $config['merge-extra'];
+    }
+
+    /**
+     * Merge config
+     *
+     * @param  array  $extra
+     *
+     * @return array
+     */
+    private function mergeConfig(array $extra)
+    {
+        return array_merge(
             [
                 'include'     => [],
                 'recurse'     => true,
@@ -349,13 +370,5 @@ class PluginState
             ],
             isset($extra['merge-plugin']) ? $extra['merge-plugin'] : []
         );
-
-        $this->includes   = is_array($config['include'])
-            ? $config['include']
-            : [$config['include']];
-
-        $this->recurse    = (bool)$config['recurse'];
-        $this->replace    = (bool)$config['replace'];
-        $this->mergeExtra = (bool)$config['merge-extra'];
     }
 }

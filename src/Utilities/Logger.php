@@ -27,8 +27,8 @@ class Logger
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * @param string      $name
-     * @param IOInterface $io
+     * @param  string       $name
+     * @param  IOInterface  $io
      */
     public function __construct($name, IOInterface $io)
     {
@@ -46,7 +46,7 @@ class Logger
      * Messages will be output at the "verbose" logging level
      * (eg `-v` needed on the Composer command).
      *
-     * @param string $message
+     * @param  string  $message
      */
     public function debug($message)
     {
