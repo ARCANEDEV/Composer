@@ -1,4 +1,4 @@
-Composer Plugin for ARCANESOFT [![Packagist License][badge_license]](https://github.com/ARCANEDEV/Composer/blob/master/LICENSE.md)
+Composer Plugin [![Packagist License][badge_license]](https://github.com/ARCANEDEV/Composer/blob/master/LICENSE.md)
 ==============
 [![Travis Status][badge_build]](https://travis-ci.org/ARCANEDEV/Composer)
 [![Coverage Status][badge_coverage]](https://scrutinizer-ci.com/g/ARCANEDEV/Composer/?branch=master)
@@ -42,5 +42,5 @@ Any ideas are welcome. Feel free to submit any issues or pull requests.
 
 ## TODOS
 
-  - [ ] Documentation
+  - [ ] Documentation (Wiki)
   - [x] Examples
