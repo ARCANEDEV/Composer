@@ -358,16 +358,15 @@ class Package
         }
 
         $rootExtra = $root->getExtra();
-        $replace   = $state->replaceDuplicateLinks();
 
+        $mergedExtra = array_merge($rootExtra, $extra);
 
-        if ($replace) {
-            $root->setExtra(array_merge($rootExtra, $extra));
-        }
-        else {
+        if ( ! $state->replaceDuplicateLinks()) {
             $this->logDuplicatedExtras($rootExtra, $extra);
-            $root->setExtra(array_merge($extra, $rootExtra));
+            $mergedExtra = array_merge($extra, $rootExtra);
         }
+
+        $root->setExtra($mergedExtra);
     }
 
     /**
@@ -379,12 +378,14 @@ class Package
     private function logDuplicatedExtras(array $rootExtra, array $extra)
     {
         foreach ($extra as $key => $value) {
-            if (isset($rootExtra[$key])) {
-                $this->logger->debug(
-                    "Ignoring duplicate <comment>{$key}</comment> in ".
-                    "<comment>{$this->path}</comment> extra config."
-                );
+            if ( ! isset($rootExtra[$key])) {
+                continue;
             }
+
+            $this->logger->debug(
+                "Ignoring duplicate <comment>{$key}</comment> in ".
+                "<comment>{$this->path}</comment> extra config."
+            );
         }
     }
 }

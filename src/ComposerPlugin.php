@@ -236,18 +236,31 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * process any merge-patterns in the current config.
      *
      * @param  Event  $event
+     *
+     * @codeCoverageIgnore
      */
     public function onPostInstallOrUpdate(Event $event)
     {
-        if ( ! $this->state->isFirstInstall()) {
-            return;
+        if ($this->state->isFirstInstall()) {
+            $this->state->setFirstInstall(false);
+            $this->logger->debug(
+                '<comment>Running additional update to apply merge settings</comment>'
+            );
+            $this->runFirstInstall($event);
         }
+    }
 
-        // @codeCoverageIgnoreStart
-        $this->state->setFirstInstall(false);
-        $this->logger->debug(
-            '<comment>Running additional update to apply merge settings</comment>'
-        );
+    /**
+     * Run first install
+     *
+     * @param  Event  $event
+     *
+     * @throws \Exception
+     *
+     * @codeCoverageIgnore
+     */
+    private function runFirstInstall(Event $event)
+    {
         $config       = $this->composer->getConfig();
         $preferSource = $config->get('preferred-install') == 'source';
         $preferDist   = $config->get('preferred-install') == 'dist';
@@ -271,6 +284,5 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         }
 
         $installer->run();
-        // @codeCoverageIgnoreEnd
     }
 }
