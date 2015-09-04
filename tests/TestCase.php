@@ -40,6 +40,9 @@ abstract class TestCase extends ProphecyTestCase
                 'repositories'  => [],
                 'require'       => [],
                 'require-dev'   => [],
+                'conflict'      => [],
+                'replace'       => [],
+                'provide'       => [],
                 'suggest'       => [],
                 'extra'         => [],
                 'autoload'      => [],
@@ -52,6 +55,9 @@ abstract class TestCase extends ProphecyTestCase
         $root->getRequires()->willReturn($data['require'])->shouldBeCalled();
         $root->getDevRequires()->willReturn($data['require-dev']);
         $root->getRepositories()->willReturn($data['repositories']);
+        $root->getConflicts()->willReturn($data['conflict']);
+        $root->getReplaces()->willReturn($data['replace']);
+        $root->getProvides()->willReturn($data['provide']);
         $root->getSuggests()->willReturn($data['suggest']);
         $root->getExtra()->willReturn($data['extra'])->shouldBeCalled();
         $root->getAutoload()->willReturn($data['autoload']);

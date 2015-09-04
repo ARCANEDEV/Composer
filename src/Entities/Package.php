@@ -91,17 +91,66 @@ class Package
      */
     public function mergeInto(RootPackage $root, PluginState $state)
     {
+        $this->addRepositories($root);
+
         $this->mergeRequires($root, $state);
         $this->mergeDevRequires($root, $state);
+
+        $this->mergeConflicts($root);
+        $this->mergeReplaces($root);
+        $this->mergeProvides($root);
+        $this->mergeSuggests($root);
 
         $this->mergeAutoload($root);
         $this->mergeDevAutoload($root);
 
-        $this->addRepositories($root);
-
         $this->mergeExtra($root, $state);
-        $this->mergeSuggests($root);
-        // TODO: provide, replace, conflict
+    }
+
+    /**
+     * Add a collection of repositories described by the given configuration
+     * to the given package and the global repository manager.
+     *
+     * @param  RootPackage  $root
+     */
+    private function addRepositories(RootPackage $root)
+    {
+        if ( ! isset($this->json['repositories'])) {
+            return;
+        }
+
+        $repoManager = $this->composer->getRepositoryManager();
+        $newRepos    = [];
+
+        foreach ($this->json['repositories'] as $repoJson) {
+            $this->addRepository($newRepos, $repoManager, $repoJson);
+        }
+
+        $root->setRepositories(array_merge($newRepos, $root->getRepositories()));
+    }
+
+    /**
+     * Add repository to collection
+     *
+     * @param  array              $newRepos
+     * @param  RepositoryManager  $repoManager
+     * @param  array              $repoJson
+     */
+    private function addRepository(array &$newRepos, RepositoryManager $repoManager, array $repoJson)
+    {
+        if ( ! isset($repoJson['type'])) {
+            return;
+        }
+
+        $this->logger->debug("Adding {$repoJson['type']} repository");
+
+        $repository = $repoManager->createRepository(
+            $repoJson['type'],
+            $repoJson
+        );
+        $repoManager->addRepository($repository);
+
+        $newRepos[] = $repository;
     }
 
     /**
@@ -248,49 +297,61 @@ class Package
     }
 
     /**
-     * Add a collection of repositories described by the given configuration
-     * to the given package and the global repository manager.
+     * Merge conflicting packages into a RootPackage
      *
      * @param  RootPackage  $root
      */
-    private function addRepositories(RootPackage $root)
+    protected function mergeConflicts(RootPackage $root)
     {
-        if ( ! isset($this->json['repositories'])) {
-            return;
-        }
-
-        $repoManager = $this->composer->getRepositoryManager();
-        $newRepos    = [];
-
-        foreach ($this->json['repositories'] as $repoJson) {
-            $this->addRepository($newRepos, $repoManager, $repoJson);
-        }
-
-        $root->setRepositories(array_merge($newRepos, $root->getRepositories()));
+        $conflicts = $this->package->getConflicts();
+        if ( ! empty($conflicts)) {
+            $root->setconflicts(array_merge(
+                $root->getConflicts(),
+                $conflicts
+            ));
+         }
     }
 
     /**
-     * Add repository to collection
+     * Merge replaced packages into a RootPackage
      *
-     * @param  array              $newRepos
-     * @param  RepositoryManager  $repoManager
-     * @param  array              $repoJson
+     * @param  RootPackage  $root
      */
-    private function addRepository(array &$newRepos, RepositoryManager $repoManager, array $repoJson)
+    protected function mergeReplaces(RootPackage $root)
     {
-        if ( ! isset($repoJson['type'])) {
+        if (empty($replaces = $this->package->getReplaces())) {
             return;
         }
 
-        $this->logger->debug("Adding {$repoJson['type']} repository");
+        $root->setReplaces(array_merge($root->getReplaces(), $replaces));
+    }
 
-        $repository = $repoManager->createRepository(
-            $repoJson['type'],
-            $repoJson
-        );
-        $repoManager->addRepository($repository);
+    /**
+     * Merge provided virtual packages into a RootPackage
+     *
+     * @param  RootPackage  $root
+     */
+    protected function mergeProvides(RootPackage $root)
+    {
+        if (empty($provides = $this->package->getProvides())) {
+            return;
+        }
 
-        $newRepos[] = $repository;
+        $root->setProvides(array_merge($root->getProvides(), $provides));
+    }
+
+    /**
+     * Merge suggested packages into a RootPackage
+     *
+     * @param  RootPackage  $root
+     */
+    private function mergeSuggests(RootPackage $root)
+    {
+        if (empty($suggests = $this->package->getSuggests())) {
+            return;
+        }
+
+        $root->setSuggests(array_merge($root->getSuggests(), $suggests));
     }
 
     /**
@@ -336,20 +397,6 @@ class Package
                     "<comment>{$this->path}</comment> extra config."
                 );
             }
-        }
-    }
-
-    /**
-     * Merge suggested packages into a RootPackage
-     *
-     * @param  RootPackage  $root
-     */
-    private function mergeSuggests(RootPackage $root)
-    {
-        $suggests = $this->package->getSuggests();
-
-        if ( ! empty($suggests)) {
-            $root->setSuggests(array_merge($root->getSuggests(), $suggests));
         }
     }
 }

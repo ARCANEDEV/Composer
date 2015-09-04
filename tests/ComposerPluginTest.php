@@ -98,7 +98,6 @@ class ComposerPluginTest extends TestCase
         $dir  = $this->fixtureDir('one-merge-no-conflicts');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
-
         $root->setRequires(Argument::type('array'))
             ->will(function ($args) use ($that) {
                 $requires = $args[0];
@@ -106,7 +105,29 @@ class ComposerPluginTest extends TestCase
                 $that->assertArrayHasKey('monolog/monolog', $requires);
             });
 
-        $root->getSuggests()->shouldBeCalled();
+        $root->setConflicts(Argument::type('array'))->will(
+            function ($args) use ($that) {
+                $suggest = $args[0];
+                $that->assertEquals(1, count($suggest));
+                $that->assertArrayHasKey('conflict/conflict', $suggest);
+            }
+        );
+
+        $root->setReplaces(Argument::type('array'))->will(
+            function ($args) use ($that) {
+                $suggest = $args[0];
+                $that->assertEquals(1, count($suggest));
+                $that->assertArrayHasKey('replace/replace', $suggest);
+            }
+        );
+        $root->setProvides(Argument::type('array'))->will(
+            function ($args) use ($that) {
+                $suggest = $args[0];
+                $that->assertEquals(1, count($suggest));
+                $that->assertArrayHasKey('provide/provide', $suggest);
+            }
+        );
+
         $root->setSuggests(Argument::type('array'))
             ->will(function ($args) use ($that) {
                 $suggest = $args[0];
@@ -116,6 +137,10 @@ class ComposerPluginTest extends TestCase
 
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
+        $root->getProvides()->shouldBeCalled();
+        $root->getReplaces()->shouldBeCalled();
+        $root->getConflicts()->shouldBeCalled();
+        $root->getSuggests()->shouldBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
@@ -152,6 +177,9 @@ class ComposerPluginTest extends TestCase
 
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
@@ -173,6 +201,9 @@ class ComposerPluginTest extends TestCase
 
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
@@ -196,6 +227,9 @@ class ComposerPluginTest extends TestCase
         );
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
@@ -223,7 +257,7 @@ class ComposerPluginTest extends TestCase
                 $that->assertArrayHasKey('monolog/monolog', $requires);
             }
         );
-        $root->getDevRequires()->shouldBeCalled();
+
         $root->setDevRequires(Argument::type('array'))->will(
             function ($args) use ($that) {
                 $requires = $args[0];
@@ -232,7 +266,12 @@ class ComposerPluginTest extends TestCase
                 $that->assertArrayHasKey('xyzzy', $requires);
             }
         );
+
+        $root->getDevRequires()->shouldBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
@@ -289,15 +328,20 @@ class ComposerPluginTest extends TestCase
                 );
             });
 
-        $root->getDevRequires()->shouldNotBeCalled();
-        $root->setDevRequires()->shouldNotBeCalled();
         $root->setRepositories(Argument::type('array'))->will(
             function ($args) use ($that) {
                 $repos = $args[0];
                 $that->assertEquals(1, count($repos));
             }
         );
+
+        $root->getDevRequires()->shouldNotBeCalled();
+        $root->setDevRequires()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
+
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
         $this->assertEquals(0, count($extraInstalls));
     }
@@ -323,9 +367,12 @@ class ComposerPluginTest extends TestCase
         $root->setDevRequires(Argument::any())->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->setRepositories(Argument::any())->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
         $root->setSuggests(Argument::any())->shouldNotBeCalled();
-        {}
+
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
         $this->assertEquals(0, count($extraInstalls));
@@ -338,8 +385,6 @@ class ComposerPluginTest extends TestCase
         $dir    = $this->fixtureDir('merged-autoload');
         $root   = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->getAutoload()->shouldBeCalled();
-        $root->getRequires()->shouldNotBeCalled();
         $root->getDevAutoload()->willReturn([]);
         $root->setAutoload(Argument::type('array'))->will(
             function ($args) use ($that) {
@@ -369,6 +414,7 @@ class ComposerPluginTest extends TestCase
                 );
             }
         );
+
         $root->setDevAutoload(Argument::type('array'))->will(
             function ($args) use ($that) {
                 $that->assertEquals(
@@ -381,6 +427,12 @@ class ComposerPluginTest extends TestCase
                 );
             }
         );
+
+        $root->getRequires()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
+        $root->getAutoload()->shouldBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
@@ -414,6 +466,9 @@ class ComposerPluginTest extends TestCase
         $root->getRequires()->shouldNotBeCalled();
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
@@ -448,6 +503,9 @@ class ComposerPluginTest extends TestCase
         $root->getRequires()->shouldNotBeCalled();
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
@@ -483,6 +541,9 @@ class ComposerPluginTest extends TestCase
         $root->getRequires()->shouldNotBeCalled();
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
