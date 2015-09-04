@@ -74,9 +74,11 @@ class Package
      */
     public function getIncludes()
     {
-        return isset($this->json['extra']['merge-plugin']['include'])
-            ? $this->json['extra']['merge-plugin']['include']
-            : [];
+        if (isset($this->json['extra']['merge-plugin']['include'])) {
+            return $this->json['extra']['merge-plugin']['include'];
+        }
+
+        return [];
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -115,9 +117,7 @@ class Package
      */
     private function addRepositories(RootPackage $root)
     {
-        if ( ! isset($this->json['repositories'])) {
-            return;
-        }
+        if ( ! isset($this->json['repositories'])) return;
 
         $repoManager = $this->composer->getRepositoryManager();
         $newRepos    = [];
@@ -138,9 +138,7 @@ class Package
      */
     private function addRepository(array &$newRepos, RepositoryManager $repoManager, array $repoJson)
     {
-        if ( ! isset($repoJson['type'])) {
-            return;
-        }
+        if ( ! isset($repoJson['type'])) return;
 
         $this->logger->debug("Adding {$repoJson['type']} repository");
 
@@ -163,9 +161,7 @@ class Package
     {
         $requires = $this->package->getRequires();
 
-        if (empty($requires)) {
-            return;
-        }
+        if (empty($requires)) return;
 
         $this->mergeStabilityFlags($root, $requires);
 
@@ -191,9 +187,7 @@ class Package
     {
         $requires = $this->package->getDevRequires();
 
-        if (empty($requires)) {
-            return;
-        }
+        if (empty($requires)) return;
 
         $this->mergeStabilityFlags($root, $requires);
 
@@ -245,9 +239,7 @@ class Package
     {
         $autoload = $this->package->getAutoload();
 
-        if (empty($autoload)) {
-            return;
-        }
+        if (empty($autoload)) return;
 
         $root->setAutoload(array_merge_recursive(
             $root->getAutoload(),
@@ -264,9 +256,7 @@ class Package
     {
         $autoload = $this->package->getDevAutoload();
 
-        if (empty($autoload)) {
-            return;
-        }
+        if (empty($autoload)) return;
 
         $root->setDevAutoload(array_merge_recursive(
             $root->getDevAutoload(),
@@ -304,12 +294,10 @@ class Package
     protected function mergeConflicts(RootPackage $root)
     {
         $conflicts = $this->package->getConflicts();
-        if ( ! empty($conflicts)) {
-            $root->setconflicts(array_merge(
-                $root->getConflicts(),
-                $conflicts
-            ));
-         }
+
+        if (empty($conflicts)) return;
+
+        $root->setconflicts(array_merge($root->getConflicts(), $conflicts));
     }
 
     /**
@@ -319,9 +307,9 @@ class Package
      */
     protected function mergeReplaces(RootPackage $root)
     {
-        if (empty($replaces = $this->package->getReplaces())) {
-            return;
-        }
+        $replaces = $this->package->getReplaces();
+
+        if (empty($replaces)) return;
 
         $root->setReplaces(array_merge($root->getReplaces(), $replaces));
     }
@@ -333,9 +321,9 @@ class Package
      */
     protected function mergeProvides(RootPackage $root)
     {
-        if (empty($provides = $this->package->getProvides())) {
-            return;
-        }
+        $provides = $this->package->getProvides();
+
+        if (empty($provides)) return;
 
         $root->setProvides(array_merge($root->getProvides(), $provides));
     }
@@ -347,9 +335,9 @@ class Package
      */
     private function mergeSuggests(RootPackage $root)
     {
-        if (empty($suggests = $this->package->getSuggests())) {
-            return;
-        }
+        $suggests = $this->package->getSuggests();
+
+        if (empty($suggests)) return;
 
         $root->setSuggests(array_merge($root->getSuggests(), $suggests));
     }
