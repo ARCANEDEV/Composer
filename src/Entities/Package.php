@@ -3,11 +3,8 @@
 use Arcanedev\Composer\Utilities\Logger;
 use Arcanedev\Composer\Utilities\Util;
 use Composer\Composer;
-use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
-use Composer\Package\Link;
 use Composer\Package\RootPackage;
-use Composer\Package\Version\VersionParser;
 use Composer\Repository\RepositoryManager;
 
 /**
@@ -241,8 +238,7 @@ class Package
         if (empty($autoload)) return;
 
         $root->setAutoload(array_merge_recursive(
-            $root->getAutoload(),
-            Util::fixRelativePaths($this->path, $autoload)
+            $root->getAutoload(), Util::fixRelativePaths($this->path, $autoload)
         ));
     }
 
@@ -258,8 +254,7 @@ class Package
         if (empty($autoload)) return;
 
         $root->setDevAutoload(array_merge_recursive(
-            $root->getDevAutoload(),
-            Util::fixRelativePaths($this->path, $autoload)
+            $root->getDevAutoload(), Util::fixRelativePaths($this->path, $autoload)
         ));
     }
 
@@ -272,15 +267,10 @@ class Package
      */
     private function mergeStabilityFlags(RootPackage $root, array $requires)
     {
-        $flags = $root->getStabilityFlags();
-
-        foreach ($requires as $name => $link) {
-            /** @var Link $link */
-            $name         = strtolower($name);
-            $version      = $link->getPrettyConstraint();
-            $stability    = VersionParser::parseStability($version);
-            $flags[$name] = BasePackage::$stabilities[$stability];
-        }
+        $flags = Util::loadFlags(
+            $root->getStabilityFlags(),
+            $requires
+        );
 
         $root->setStabilityFlags($flags);
     }
