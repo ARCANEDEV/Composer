@@ -47,7 +47,9 @@ class Package
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * @param  string    $path     Path to composer.json file
+     * Make a Package instance.
+     *
+     * @param  string    $path      Path to composer.json file
      * @param  Composer  $composer
      * @param  Logger    $logger
      */
@@ -148,10 +150,10 @@ class Package
     }
 
     /**
-     * Merge require into a RootPackage
+     * Merge require into a RootPackage.
      *
-     * @param  RootPackage $root
-     * @param  PluginState $state
+     * @param  RootPackage  $root
+     * @param  PluginState  $state
      */
     private function mergeRequires(RootPackage $root, PluginState $state)
     {
@@ -174,7 +176,7 @@ class Package
     }
 
     /**
-     * Merge require-dev into RootPackage
+     * Merge require-dev into RootPackage.
      *
      * @param  RootPackage  $root
      * @param  PluginState  $state
@@ -227,7 +229,7 @@ class Package
     }
 
     /**
-     * Merge autoload into a RootPackage
+     * Merge autoload into a RootPackage.
      *
      * @param  RootPackage  $root
      */
@@ -243,7 +245,7 @@ class Package
     }
 
     /**
-     * Merge autoload-dev into a RootPackage
+     * Merge autoload-dev into a RootPackage.
      *
      * @param  RootPackage  $root
      */
@@ -260,7 +262,7 @@ class Package
 
     /**
      * Extract and merge stability flags from the given collection of
-     * requires and merge them into a RootPackage
+     * requires and merge them into a RootPackage.
      *
      * @param  RootPackage  $root
      * @param  array        $requires
@@ -276,7 +278,7 @@ class Package
     }
 
     /**
-     * Merge conflicting packages into a RootPackage
+     * Merge conflicting packages into a RootPackage.
      *
      * @param  RootPackage  $root
      */
@@ -290,7 +292,7 @@ class Package
     }
 
     /**
-     * Merge replaced packages into a RootPackage
+     * Merge replaced packages into a RootPackage.
      *
      * @param  RootPackage  $root
      */
@@ -304,7 +306,7 @@ class Package
     }
 
     /**
-     * Merge provided virtual packages into a RootPackage
+     * Merge provided virtual packages into a RootPackage.
      *
      * @param  RootPackage  $root
      */
@@ -318,7 +320,7 @@ class Package
     }
 
     /**
-     * Merge suggested packages into a RootPackage
+     * Merge suggested packages into a RootPackage.
      *
      * @param  RootPackage  $root
      */
@@ -332,7 +334,7 @@ class Package
     }
 
     /**
-     * Merge extra config into a RootPackage
+     * Merge extra config into a RootPackage.
      *
      * @param  RootPackage  $root
      * @param  PluginState  $state
@@ -346,22 +348,37 @@ class Package
             return;
         }
 
+        $mergedExtra = $this->getExtra($root, $state, $extra);
+
+        $root->setExtra($mergedExtra);
+    }
+
+    /**
+     * Get extra config.
+     *
+     * @param  RootPackage  $root
+     * @param  PluginState  $state
+     * @param  array        $extra
+     *
+     * @return array
+     */
+    private function getExtra(RootPackage $root, PluginState $state, $extra)
+    {
         $rootExtra   = $root->getExtra();
         $mergedExtra = array_merge($rootExtra, $extra);
 
-        if ( ! $state->replaceDuplicateLinks()) {
-            foreach ($extra as $key => $value) {
-                if (isset($rootExtra[$key])) {
-                    $this->logger->debug(
-                        "Ignoring duplicate <comment>{$key}</comment> in ".
-                        "<comment>{$this->path}</comment> extra config."
-                    );
-                }
-            }
-
-            $mergedExtra = array_merge($extra, $rootExtra);
+        if ($state->replaceDuplicateLinks()) {
+            return $mergedExtra;
         }
 
-        $root->setExtra($mergedExtra);
+        foreach ($extra as $key => $value) {
+            if ( ! isset($rootExtra[$key])) continue;
+
+            $this->logger->debug(
+                "Ignoring duplicate <comment>{$key}</comment> in <comment>{$this->path}</comment> extra config."
+            );
+        }
+
+        return array_merge($extra, $rootExtra);
     }
 }
