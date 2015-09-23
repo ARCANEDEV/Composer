@@ -385,42 +385,29 @@ class ComposerPluginTest extends TestCase
         $dir    = $this->fixtureDir('merged-autoload');
         $root   = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->getDevAutoload()->willReturn([]);
+        $autoload = [];
+
+        $root->getAutoload()->shouldBeCalled();
+        $root->getDevAutoload()->shouldBeCalled();
+        $root->getRequires()->shouldNotBeCalled();
+
         $root->setAutoload(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $that->assertEquals(
-                    [
-                        'psr-4'     => [
-                            'Arcanedev\\'           => 'src/',
-                            'Arcanedev\\Package\\'  => [
-                                'modules/Package/package/',
-                                'modules/Package/libs/'
-                            ],
-                            'Arcanedev\\Module\\'   => 'modules/Package/module/'
-                        ],
-                        'psr-0'     => [
-                            'UniqueGlobalClass' => 'modules/Package/',
-                            '' => 'modules/Package/fallback/'
-                        ],
-                        'files'     => [
-                            'modules/Package/helpers.php'
-                        ],
-                        'classmap'  => [
-                            'modules/Package/init.php',
-                            'modules/Package/includes/'
-                        ],
-                    ],
-                    $args[0]
-                );
+            function ($args, $root) use (&$autoload) {
+                // Can't easily assert directly since there will be multiple
+                // calls to this setter to create our final expected state
+                $autoload = $args[0];
+                // Return the new data for the next call to getAutoLoad()
+                $root->getAutoload()->willReturn($args[0]);
             }
-        );
+        )->shouldBeCalledTimes(2);
 
         $root->setDevAutoload(Argument::type('array'))->will(
             function ($args) use ($that) {
                 $that->assertEquals(
                     [
                         'psr-4'     => [
-                            'Arcanedev\\Module\\Tests\\'    => 'modules/Package/module/tests/',
+                            'Arcanedev\\Tests\\'         => 'tests/',
+                            'Arcanedev\\Module\\Tests\\' => 'modules/Package/module/tests/',
                         ],
                     ],
                     $args[0]
@@ -428,15 +415,31 @@ class ComposerPluginTest extends TestCase
             }
         );
 
-        $root->getRequires()->shouldNotBeCalled();
-        $root->getConflicts()->shouldNotBeCalled();
-        $root->getReplaces()->shouldNotBeCalled();
-        $root->getProvides()->shouldNotBeCalled();
-        $root->getAutoload()->shouldBeCalled();
-
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
         $this->assertEquals(0, count($extraInstalls));
+        $this->assertEquals([
+            'psr-4'     => [
+                'Arcanedev\\'           => 'src/',
+                'Arcanedev\\Package\\'  => [
+                    'modules/Package/package/',
+                    'modules/Package/libs/'
+                ],
+                'Arcanedev\\Module\\'   => 'modules/Package/module/'
+            ],
+            'psr-0'     => [
+                'UniqueGlobalClass' => 'modules/Package/',
+                '' => 'modules/Package/fallback/'
+            ],
+            'files'     => [
+                'modules/Package/helpers.php',
+                'private/bootstrap.php'
+            ],
+            'classmap'  => [
+                'modules/Package/init.php',
+                'modules/Package/includes/'
+            ],
+        ], $autoload);
     }
 
     /**

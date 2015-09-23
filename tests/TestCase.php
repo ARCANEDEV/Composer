@@ -46,6 +46,7 @@ abstract class TestCase extends ProphecyTestCase
                 'suggest'       => [],
                 'extra'         => [],
                 'autoload'      => [],
+                'autoload-dev'  => [],
             ],
             $json
         );
@@ -61,6 +62,7 @@ abstract class TestCase extends ProphecyTestCase
         $root->getSuggests()->willReturn($data['suggest']);
         $root->getExtra()->willReturn($data['extra'])->shouldBeCalled();
         $root->getAutoload()->willReturn($data['autoload']);
+        $root->getDevAutoload()->willReturn($data['autoload-dev']);
         $root->getStabilityFlags()->willReturn([]);
         $root->setStabilityFlags(Argument::type('array'))->will(
             function ($args) use ($that) {

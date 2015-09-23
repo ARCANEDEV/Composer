@@ -1,7 +1,6 @@
 <?php namespace Arcanedev\Composer\Entities;
 
 use Arcanedev\Composer\Utilities\Logger;
-use Arcanedev\Composer\Utilities\Util;
 use Composer\Composer;
 use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
@@ -243,7 +242,7 @@ class Package
 
         $root->setAutoload(array_merge_recursive(
             $root->getAutoload(),
-            Util::prependPaths($this->path, $autoload)
+            $this->fixRelativePaths($autoload)
         ));
     }
 
@@ -260,8 +259,27 @@ class Package
 
         $root->setDevAutoload(array_merge_recursive(
             $root->getDevAutoload(),
-            Util::prependPaths($this->path, $autoload)
+            $this->fixRelativePaths($autoload)
         ));
+    }
+
+    /**
+     * Fix a collection of paths that are relative to this package to be
+     * relative to the base package.
+     *
+     * @param array $paths
+     * @return array
+     */
+    protected function fixRelativePaths(array $paths)
+    {
+        $base = dirname($this->path);
+        $base = ($base === '.') ? '' : "{$base}/";
+
+        array_walk_recursive($paths, function (&$path) use ($base) {
+            $path = "{$base}{$path}";
+        });
+
+        return $paths;
     }
 
     /**
