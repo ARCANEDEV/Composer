@@ -1,13 +1,13 @@
 <?php namespace Arcanedev\Composer\Entities;
 
 use Arcanedev\Composer\Utilities\Logger;
+use Arcanedev\Composer\Utilities\Util;
 use Composer\Composer;
 use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
 use Composer\Package\Link;
 use Composer\Package\RootPackage;
 use Composer\Package\Version\VersionParser;
-use Composer\Repository\RepositoryManager;
 
 /**
  * Class Package
@@ -122,32 +122,20 @@ class Package
         $newRepos    = [];
 
         foreach ($this->json['repositories'] as $repoJson) {
-            $this->addRepository($newRepos, $repoManager, $repoJson);
+            if ( ! isset($repoJson['type'])) continue;
+
+            $this->logger->debug("Adding {$repoJson['type']} repository");
+
+            $repository = $repoManager->createRepository(
+                $repoJson['type'],
+                $repoJson
+            );
+            $repoManager->addRepository($repository);
+
+            $newRepos[] = $repository;
         }
 
         $root->setRepositories(array_merge($newRepos, $root->getRepositories()));
-    }
-
-    /**
-     * Add repository to collection
-     *
-     * @param  array              $newRepos
-     * @param  RepositoryManager  $repoManager
-     * @param  array              $repoJson
-     */
-    private function addRepository(array &$newRepos, RepositoryManager $repoManager, array $repoJson)
-    {
-        if ( ! isset($repoJson['type'])) return;
-
-        $this->logger->debug("Adding {$repoJson['type']} repository");
-
-        $repository = $repoManager->createRepository(
-            $repoJson['type'],
-            $repoJson
-        );
-        $repoManager->addRepository($repository);
-
-        $newRepos[] = $repository;
     }
 
     /**
@@ -242,7 +230,7 @@ class Package
 
         $root->setAutoload(array_merge_recursive(
             $root->getAutoload(),
-            $this->fixRelativePaths($autoload)
+            Util::fixRelativePaths($this->path, $autoload)
         ));
     }
 
@@ -259,27 +247,8 @@ class Package
 
         $root->setDevAutoload(array_merge_recursive(
             $root->getDevAutoload(),
-            $this->fixRelativePaths($autoload)
+            Util::fixRelativePaths($this->path, $autoload)
         ));
-    }
-
-    /**
-     * Fix a collection of paths that are relative to this package to be
-     * relative to the base package.
-     *
-     * @param array $paths
-     * @return array
-     */
-    protected function fixRelativePaths(array $paths)
-    {
-        $base = dirname($this->path);
-        $base = ($base === '.') ? '' : "{$base}/";
-
-        array_walk_recursive($paths, function (&$path) use ($base) {
-            $path = "{$base}{$path}";
-        });
-
-        return $paths;
     }
 
     /**
@@ -375,35 +344,22 @@ class Package
             return;
         }
 
-        $rootExtra = $root->getExtra();
-
+        $rootExtra   = $root->getExtra();
         $mergedExtra = array_merge($rootExtra, $extra);
 
         if ( ! $state->replaceDuplicateLinks()) {
-            $this->logDuplicatedExtras($rootExtra, $extra);
+            foreach ($extra as $key => $value) {
+                if (isset($rootExtra[$key])) {
+                    $this->logger->debug(
+                        "Ignoring duplicate <comment>{$key}</comment> in ".
+                        "<comment>{$this->path}</comment> extra config."
+                    );
+                }
+            }
+
             $mergedExtra = array_merge($extra, $rootExtra);
         }
 
         $root->setExtra($mergedExtra);
-    }
-
-    /**
-     * Log the duplicated extras
-     *
-     * @param  array  $rootExtra
-     * @param  array  $extra
-     */
-    private function logDuplicatedExtras(array $rootExtra, array $extra)
-    {
-        foreach ($extra as $key => $value) {
-            if ( ! isset($rootExtra[$key])) {
-                continue;
-            }
-
-            $this->logger->debug(
-                "Ignoring duplicate <comment>{$key}</comment> in ".
-                "<comment>{$this->path}</comment> extra config."
-            );
-        }
     }
 }
