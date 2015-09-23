@@ -8,6 +8,7 @@ use Composer\Package\CompletePackage;
 use Composer\Package\Link;
 use Composer\Package\RootPackage;
 use Composer\Package\Version\VersionParser;
+use Composer\Repository\RepositoryManager;
 
 /**
  * Class Package
@@ -118,24 +119,35 @@ class Package
     {
         if ( ! isset($this->json['repositories'])) return;
 
-        $repoManager = $this->composer->getRepositoryManager();
-        $newRepos    = [];
+        $repoManager  = $this->composer->getRepositoryManager();
+        $repositories = [];
 
         foreach ($this->json['repositories'] as $repoJson) {
-            if ( ! isset($repoJson['type'])) continue;
-
-            $this->logger->debug("Adding {$repoJson['type']} repository");
-
-            $repository = $repoManager->createRepository(
-                $repoJson['type'],
-                $repoJson
-            );
-            $repoManager->addRepository($repository);
-
-            $newRepos[] = $repository;
+            $this->addRepository($repoManager, $repositories, $repoJson);
         }
 
-        $root->setRepositories(array_merge($newRepos, $root->getRepositories()));
+        $root->setRepositories(array_merge($repositories, $root->getRepositories()));
+    }
+
+    /**
+     * Add a repository to collection of repositories.
+     *
+     * @param  RepositoryManager  $repoManager
+     * @param  array              $repositories
+     * @param  array              $repoJson
+     */
+    private function addRepository(RepositoryManager $repoManager, array &$repositories, $repoJson)
+    {
+        if ( ! isset($repoJson['type'])) return;
+
+        $this->logger->debug("Adding {$repoJson['type']} repository");
+
+        $repository = $repoManager->createRepository(
+            $repoJson['type'], $repoJson
+        );
+
+        $repoManager->addRepository($repository);
+        $repositories[] = $repository;
     }
 
     /**
