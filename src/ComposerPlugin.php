@@ -139,7 +139,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     private function installRequires(Request $request, array $links, $dev = false)
     {
         foreach ($links as $link) {
-            $this->logger->debug($dev
+            $this->logger->info($dev
                 ? "Adding dev dependency <comment>{$link}</comment>"
                 : "Adding dependency <comment>{$link}</comment>"
             );
@@ -194,13 +194,13 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     private function mergeFile(RootPackageInterface $root, $path)
     {
         if (isset($this->loadedFiles[$path])) {
-            $this->logger->debug("Skipping duplicate <comment>$path</comment>...");
+            $this->logger->debug("Skipping duplicate <comment>$path</comment>");
 
             return;
         }
 
         $this->loadedFiles[$path] = true;
-        $this->logger->debug("Loading <comment>{$path}</comment>...");
+        $this->logger->info("Loading <comment>{$path}</comment>...");
         $package = new Package($path, $this->composer, $this->logger);
         $package->mergeInto($root, $this->state);
 
@@ -223,7 +223,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             $package = $op->getPackage()->getName();
 
             if ($package === self::PACKAGE_NAME) {
-                $this->logger->debug('Arcanedev composer merge-plugin installed');
+                $this->logger->debug('Composer merge-plugin installed');
                 $this->state->setFirstInstall(true);
                 $this->state->setLocked(
                     $event->getComposer()->getLocker()->isLocked()
@@ -245,7 +245,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     {
         if ($this->state->isFirstInstall()) {
             $this->state->setFirstInstall(false);
-            $this->logger->debug(
+            $this->logger->info(
                 '<comment>Running additional update to apply merge settings</comment>'
             );
             $this->runFirstInstall($event);

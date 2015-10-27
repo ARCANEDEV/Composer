@@ -149,7 +149,7 @@ class Package
     ) {
         if ( ! isset($repoJson['type'])) return;
 
-        $this->logger->debug("Adding {$repoJson['type']} repository");
+        $this->logger->info("Adding {$repoJson['type']} repository");
 
         $repository = $repoManager->createRepository(
             $repoJson['type'], $repoJson
@@ -225,12 +225,12 @@ class Package
     {
         foreach ($merge as $name => $link) {
             if ( ! isset($origin[$name]) || $replace) {
-                $this->logger->debug("Merging <comment>{$name}</comment>");
+                $this->logger->info("Merging <comment>{$name}</comment>");
                 $origin[$name] = $link;
             }
             else {
                 // Defer to solver.
-                $this->logger->debug("Deferring duplicate <comment>{$name}</comment>");
+                $this->logger->info("Deferring duplicate <comment>{$name}</comment>");
                 $duplicateLinks[] = $link;
             }
         }
@@ -407,7 +407,7 @@ class Package
         foreach ($extra as $key => $value) {
             if ( ! isset($rootExtra[$key])) continue;
 
-            $this->logger->debug(
+            $this->logger->info(
                 "Ignoring duplicate <comment>{$key}</comment> in <comment>{$this->path}</comment> extra config."
             );
         }

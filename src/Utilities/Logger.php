@@ -47,16 +47,33 @@ class Logger
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Logger a debug message
+     * Log an info message.
      *
      * Messages will be output at the "verbose" logging level
      * (eg `-v` needed on the Composer command).
      *
      * @param  string  $message
      */
-    public function debug($message)
+    public function info($message)
     {
         if ($this->io->isVerbose()) {
+            $message = "  <info>[{$this->name}]</info> {$message}";
+
+            $this->log($message);
+        }
+    }
+
+    /**
+     * Log a debug message.
+     *
+     * Messages will be output at the "very verbose" logging level
+     * (eg `-vv` needed on the Composer command).
+     *
+     * @param  string  $message
+     */
+    public function debug($message)
+    {
+        if ($this->io->isVeryVerbose()) {
             $message = "  <info>[{$this->name}]</info> {$message}";
 
             $this->log($message);
