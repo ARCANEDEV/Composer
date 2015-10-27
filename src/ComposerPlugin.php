@@ -15,7 +15,7 @@ use Composer\Installer\PackageEvent;
 use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
 use Composer\Package\Link;
-use Composer\Package\RootPackage;
+use Composer\Package\RootPackageInterface;
 use Composer\Plugin\PluginInterface;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
@@ -177,7 +177,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function mergeIncludes(array $includes)
     {
-        $root  = $this->state->getRootPackage();
+        $root  = $this->composer->getPackage();
         $paths = array_reduce(array_map('glob', $includes), 'array_merge', []);
 
         foreach ($paths as $path) {
@@ -188,10 +188,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Read a JSON file and merge its contents
      *
-     * @param  RootPackage  $root
-     * @param  string       $path
+     * @param  RootPackageInterface  $root
+     * @param  string                $path
      */
-    private function mergeFile(RootPackage $root, $path)
+    private function mergeFile(RootPackageInterface $root, $path)
     {
         if (isset($this->loadedFiles[$path])) {
             $this->logger->debug("Skipping duplicate <comment>$path</comment>...");

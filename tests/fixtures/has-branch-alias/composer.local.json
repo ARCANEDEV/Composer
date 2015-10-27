@@ -1,5 +1,48 @@
 {
     "require": {
-        "php": ">=5.4.0,<5.6.0"
+        "monolog/monolog": "^1.1",
+        "php": ">=5.4.0,<5.6.0",
+        "test/foo": "dev-master"
+    },
+    "require-dev": {
+        "test/a": "*",
+        "test/bar": "1.0.*@beta"
+    },
+    "conflict": {
+        "test/baz": "*"
+    },
+    "replace": {
+        "test/xyzzy": "*"
+    },
+    "provide": {
+        "test/plugh": "*"
+    },
+    "suggest": {
+        "arcanedev/arcanededv": "ARCANEDEV - web agency"
+    },
+    "autoload": {
+        "psr-4": {
+            "Foo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Foo\\": "src/"
+        }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/arcanedev/composer.git"
+        }, {
+            "packagist": false
+        }
+    ],
+    "extra": {
+        "merge-plugin": {
+            "ignored": true,
+            "include": []
+        },
+        "wibble": "wobble"
     }
 }

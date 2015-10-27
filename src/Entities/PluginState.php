@@ -1,9 +1,6 @@
 <?php namespace Arcanedev\Composer\Entities;
 
 use Composer\Composer;
-use Composer\Package\AliasPackage;
-use Composer\Package\RootPackage;
-use UnexpectedValueException;
 
 /**
  * Class     PluginState
@@ -96,30 +93,6 @@ class PluginState
      |  Getters & Setters
      | ------------------------------------------------------------------------------------------------
      */
-    /**
-     * Get the root package
-     *
-     * @return RootPackage
-     */
-    public function getRootPackage()
-    {
-        $root = $this->composer->getPackage();
-
-        if ($root instanceof AliasPackage) {
-            $root = $root->getAliasOf();
-        }
-
-        // @codeCoverageIgnoreStart
-        if ( ! $root instanceof RootPackage) {
-            throw new UnexpectedValueException(
-                'Expected instance of RootPackage, got ' . get_class($root)
-            );
-        }
-        // @codeCoverageIgnoreEnd
-
-        return $root;
-    }
-
     /**
      * Get list of filenames and/or glob patterns to include
      *
@@ -341,7 +314,7 @@ class PluginState
      */
     public function loadSettings()
     {
-        $extra          = $this->getRootPackage()->getExtra();
+        $extra          = $this->composer->getPackage()->getExtra();
         $config         = $this->mergeConfig($extra);
         $this->includes = is_array($config['include'])
             ? $config['include']
