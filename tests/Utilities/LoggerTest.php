@@ -1,14 +1,14 @@
 <?php namespace Arcanedev\Composer\Tests\Utilities;
 
+use Arcanedev\Composer\Tests\TestCase;
 use Arcanedev\Composer\Utilities\Logger;
 use Prophecy\Argument;
-use Prophecy\PhpUnit\ProphecyTestCase;
 
 /**
  * Class LoggerTest
  * @package Arcanedev\Composer\Tests\Utilities
  */
-class LoggerTest extends ProphecyTestCase
+class LoggerTest extends TestCase
 {
     /* ------------------------------------------------------------------------------------------------
      |  Properties

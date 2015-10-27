@@ -1,13 +1,13 @@
 <?php namespace Arcanedev\Composer\Tests\Entities;
 
 use Arcanedev\Composer\Entities\PluginState;
-use Prophecy\PhpUnit\ProphecyTestCase;
+use Arcanedev\Composer\Tests\TestCase;
 
 /**
  * Class PluginStateTest
  * @package Arcanedev\Composer\Tests\Entities
  */
-class PluginStateTest extends ProphecyTestCase
+class PluginStateTest extends TestCase
 {
     /* ------------------------------------------------------------------------------------------------
      |  Properties

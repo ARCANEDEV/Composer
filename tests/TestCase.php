@@ -2,13 +2,12 @@
 
 use Composer\Package\BasePackage;
 use Prophecy\Argument;
-use Prophecy\PhpUnit\ProphecyTestCase;
 
 /**
  * Class TestCase
  * @package Arcanedev\Composer\Tests
  */
-abstract class TestCase extends ProphecyTestCase
+abstract class TestCase extends \PHPUnit_Framework_TestCase
 {
     /* ------------------------------------------------------------------------------------------------
      |  Common Functions
