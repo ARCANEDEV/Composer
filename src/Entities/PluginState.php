@@ -6,8 +6,10 @@ use Composer\Package\RootPackage;
 use UnexpectedValueException;
 
 /**
- * Class PluginState
- * @package Arcanedev\Composer\Entities
+ * Class     PluginState
+ *
+ * @package  Arcanedev\Composer\Entities
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
 class PluginState
 {

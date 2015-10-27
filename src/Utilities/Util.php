@@ -4,6 +4,12 @@ use Composer\Package\BasePackage;
 use Composer\Package\Link;
 use Composer\Package\Version\VersionParser;
 
+/**
+ * Class     Util
+ *
+ * @package  Arcanedev\Composer\Utilities
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
+ */
 class Util
 {
     /* ------------------------------------------------------------------------------------------------

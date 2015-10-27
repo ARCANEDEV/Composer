@@ -4,8 +4,10 @@ use Arcanedev\Composer\Entities\PluginState;
 use Arcanedev\Composer\Tests\TestCase;
 
 /**
- * Class PluginStateTest
- * @package Arcanedev\Composer\Tests\Entities
+ * Class     PluginStateTest
+ *
+ * @package  Arcanedev\Composer\Tests\Entities
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
 class PluginStateTest extends TestCase
 {

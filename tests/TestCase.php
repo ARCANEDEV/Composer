@@ -1,13 +1,16 @@
 <?php namespace Arcanedev\Composer\Tests;
 
 use Composer\Package\BasePackage;
+use PHPUnit_Framework_TestCase;
 use Prophecy\Argument;
 
 /**
- * Class TestCase
- * @package Arcanedev\Composer\Tests
+ * Class     TestCase
+ *
+ * @package  Arcanedev\Composer\Tests
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
-abstract class TestCase extends \PHPUnit_Framework_TestCase
+abstract class TestCase extends PHPUnit_Framework_TestCase
 {
     /* ------------------------------------------------------------------------------------------------
      |  Common Functions

@@ -5,8 +5,10 @@ use Arcanedev\Composer\Utilities\Logger;
 use Prophecy\Argument;
 
 /**
- * Class LoggerTest
- * @package Arcanedev\Composer\Tests\Utilities
+ * Class     LoggerTest
+ *
+ * @package  Arcanedev\Composer\Tests\Utilities
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
 class LoggerTest extends TestCase
 {

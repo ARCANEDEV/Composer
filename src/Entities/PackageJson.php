@@ -6,8 +6,10 @@ use Composer\Package\CompletePackage;
 use Composer\Package\Loader\ArrayLoader;
 
 /**
- * Class PackageJson
- * @package Arcanedev\Composer\Entities
+ * Class     PackageJson
+ *
+ * @package  Arcanedev\Composer\Entities
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
 class PackageJson
 {

@@ -8,8 +8,10 @@ use Composer\Package\RootPackage;
 use Composer\Repository\RepositoryManager;
 
 /**
- * Class Package
- * @package Arcanedev\Composer\Entities
+ * Class     Package
+ *
+ * @package  Arcanedev\Composer\Entities
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
 class Package
 {

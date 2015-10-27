@@ -3,8 +3,10 @@
 use Composer\IO\IOInterface;
 
 /**
- * Class Logger
- * @package Arcanedev\Composer\Helpers
+ * Class     Logger
+ *
+ * @package  Arcanedev\Composer\Utilities
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
 class Logger
 {
@@ -13,11 +15,15 @@ class Logger
      | ------------------------------------------------------------------------------------------------
      */
     /**
+     * The log name.
+     *
      * @var string $name
      */
     protected $name;
 
     /**
+     * The log IO instance.
+     *
      * @var IOInterface $io
      */
     protected $io;
@@ -53,15 +59,35 @@ class Logger
         if ($this->io->isVerbose()) {
             $message = "  <info>[{$this->name}]</info> {$message}";
 
-            if (method_exists($this->io, 'writeError')) {
-                $this->io->writeError($message);
-            }
-            else {
-                // @codeCoverageIgnoreStart
-                // Backwards compatibility for Composer before cb336a5
+            $this->log($message);
+        }
+    }
+
+    /**
+     * Log a warning message.
+     *
+     * @param  string  $message
+     */
+    public function warning($message)
+    {
+        $message = "  <error>[{$this->name}]</error> {$message}";
+
+        $this->log($message);
+    }
+
+    /**
+     * Write a message.
+     *
+     * @param  string  $message
+     */
+    protected function log($message)
+    {
+        if (method_exists($this->io, 'writeError')) {
+            $this->io->writeError($message);
+        } else {
+            // @codeCoverageIgnoreStart
                 $this->io->write($message);
-                // @codeCoverageIgnoreEnd
-            }
+            // @codeCoverageIgnoreEn
         }
     }
 }

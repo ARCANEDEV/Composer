@@ -16,8 +16,10 @@ use Prophecy\Argument;
 use ReflectionProperty;
 
 /**
- * Class ComposerPluginTest
- * @package Arcanedev\Composer\Tests
+ * Class     ComposerPluginTest
+ *
+ * @package  Arcanedev\Composer\Tests
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
 class ComposerPluginTest extends TestCase
 {

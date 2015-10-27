@@ -21,8 +21,10 @@ use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 
 /**
- * Class ComposerPlugin
- * @package Arcanedev\Composer
+ * Class     ComposerPlugin
+ *
+ * @package  Arcanedev\Composer
+ * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
 class ComposerPlugin implements PluginInterface, EventSubscriberInterface
 {
