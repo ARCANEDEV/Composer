@@ -4,10 +4,13 @@ use Arcanedev\Composer\Utilities\Logger;
 use Arcanedev\Composer\Utilities\Util;
 use Composer\Composer;
 use Composer\Package\AliasPackage;
+use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
+use Composer\Package\Link;
 use Composer\Package\RootAliasPackage;
 use Composer\Package\RootPackage;
 use Composer\Package\RootPackageInterface;
+use Composer\Package\Version\VersionParser;
 use Composer\Repository\RepositoryManager;
 use UnexpectedValueException;
 
@@ -281,13 +284,82 @@ class Package
      */
     private function mergeStabilityFlags(RootPackageInterface $root, array $requires)
     {
-        $flags = Util::loadFlags(
-            $root->getStabilityFlags(),
-            $requires
-        );
+        $flags = $this->loadFlags($root, $requires);
 
         self::castRootPackage($root)
             ->setStabilityFlags($flags);
+    }
+
+    /**
+     * Load stability flags.
+     *
+     * @param  RootPackageInterface  $root
+     * @param  array                 $requires
+     *
+     * @return array
+     */
+    private function loadFlags(RootPackageInterface $root, array $requires)
+    {
+        $flags = $root->getStabilityFlags();
+
+        // Adapted from RootPackageLoader::extractStabilityFlags
+        $rootMin = BasePackage::$stabilities[$root->getMinimumStability()];
+        $pattern = '/^[^@]*?@(' . implode('|', array_keys(BasePackage::$stabilities)) .')$/i';
+
+        foreach ($requires as $name => $link) {
+            /** @var Link $link */
+            $name      = strtolower($name);
+            $version   = $link->getPrettyConstraint();
+            $stability = $this->extractStability($pattern, $version, $rootMin);
+
+            if (
+                $stability !== null &&
+                ! (isset($flags[$name]) && $flags[$name] > $stability)
+            ) {
+                // Store if less stable than current stability for package
+                $flags[$name] = $stability;
+            }
+        }
+
+        return $flags;
+    }
+
+    /**
+     * Extract stability.
+     *
+     * @param  string  $pattern
+     * @param  string  $version
+     * @param  string  $rootMin
+     *
+     * @return mixed
+     */
+    private function extractStability($pattern, $version, $rootMin)
+    {
+        $stability = null;
+        $unAliased = preg_replace('/^([^,\s@]+) as .+$/', '$1', $version);
+
+        if (preg_match($pattern, $version, $match)) {
+            // Extract explicit '@stability'
+            return BasePackage::$stabilities[
+                VersionParser::normalizeStability($match[1])
+            ];
+        }
+
+        if (preg_match('/^[^,\s@]+$/', $unAliased)) {
+            // Extract explicit '-stability'
+            $stability = BasePackage::$stabilities[
+                VersionParser::parseStability($unAliased)
+            ];
+
+            if (
+                $stability === BasePackage::STABILITY_STABLE || $rootMin > $stability
+            ) {
+                // Ignore if 'stable' or more stable than the global minimum
+                return null;
+            }
+        }
+
+        return $stability;
     }
 
     /**

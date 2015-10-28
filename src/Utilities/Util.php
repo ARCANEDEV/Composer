@@ -1,9 +1,5 @@
 <?php namespace Arcanedev\Composer\Utilities;
 
-use Composer\Package\BasePackage;
-use Composer\Package\Link;
-use Composer\Package\Version\VersionParser;
-
 /**
  * Class     Util
  *
@@ -35,26 +31,5 @@ class Util
         });
 
         return $paths;
-    }
-
-    /**
-     * Load stability flags.
-     *
-     * @param  array  $flags
-     * @param  array  $requires
-     *
-     * @return array
-     */
-    public static function loadFlags(array $flags, array $requires)
-    {
-        foreach ($requires as $name => $link) {
-            /** @var Link $link */
-            $name         = strtolower($name);
-            $version      = $link->getPrettyConstraint();
-            $stability    = VersionParser::parseStability($version);
-            $flags[$name] = BasePackage::$stabilities[$stability];
-        }
-
-        return $flags;
     }
 }

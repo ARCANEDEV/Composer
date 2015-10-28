@@ -8,6 +8,7 @@ use Composer\Installer\InstallerEvent;
 use Composer\Installer\InstallerEvents;
 use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
+use Composer\Package\BasePackage;
 use Composer\Package\Package;
 use Composer\Package\RootPackage;
 use Composer\Script\Event;
@@ -359,13 +360,31 @@ class ComposerPluginTest extends TestCase
         $root->setRequires(Argument::type('array'))->will(
             function ($args) use ($that) {
                 $requires = $args[0];
-                $that->assertEquals(4, count($requires));
+                $that->assertEquals(7, count($requires));
                 $that->assertArrayHasKey('test/foo', $requires);
                 $that->assertArrayHasKey('test/bar', $requires);
                 $that->assertArrayHasKey('test/baz', $requires);
                 $that->assertArrayHasKey('test/xyzzy', $requires);
+                $that->assertArrayHasKey('test/plugh', $requires);
+                $that->assertArrayHasKey('test/plover', $requires);
+                $that->assertArrayHasKey('test/bedquilt', $requires);
             }
         );
+
+        $root->setStabilityFlags(Argument::type('array'))->will(
+            function ($args) use ($that, &$expects) {
+                $expected = [
+                    'test/foo'   => BasePackage::STABILITY_DEV,
+                    'test/bar'   => BasePackage::STABILITY_BETA,
+                    'test/baz'   => BasePackage::STABILITY_ALPHA,
+                    'test/xyzzy' => BasePackage::STABILITY_RC,
+                    'test/plugh' => BasePackage::STABILITY_STABLE,
+                ];
+
+                $that->assertEquals($expected, $args[0]);
+             }
+        );
+
         $root->getDevRequires()->shouldNotBeCalled();
         $root->setDevRequires(Argument::any())->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
@@ -379,6 +398,50 @@ class ComposerPluginTest extends TestCase
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
         $this->assertEquals(0, count($extraInstalls));
+    }
+
+    /**
+     * @test
+     *
+     * Given a root package with minimum-stability=beta
+     *   and a required stable package
+     *   and an include with a stability=dev require for the same package
+     *   and a stability=stable require for another package
+     * When the plugin is run
+     * Then the first package should require stability=dev
+     *   amd the second package should not specify a minimum stability.
+     */
+    public function it_can_merge_stability_flags_respects_minimum_stability()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('merge-stability-flags-respects-minimum-stability');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        // The root package declares a stable package
+        $root->getStabilityFlags()->willReturn(array(
+            'arcanedev/composer' => BasePackage::STABILITY_STABLE,
+        ))->shouldBeCalled();
+
+        $root->setRequires(Argument::type('array'))->will(
+            function ($args) use ($that) {
+                $requires = $args[0];
+                $that->assertCount(2, $requires);
+                $that->assertArrayHasKey('arcanedev/composer', $requires);
+                $that->assertArrayHasKey('arcanedev/arcanesoft', $requires);
+            }
+        );
+
+        $root->setStabilityFlags(Argument::type('array'))->will(
+            function ($args) use ($that, &$expects) {
+                $expected = [
+                    'arcanedev/composer' => BasePackage::STABILITY_DEV,
+                ];
+
+                $that->assertEquals($expected, $args[0]);
+            }
+        );
+
+        $this->triggerPlugin($root->reveal(), $dir);
     }
 
     /** @test */
@@ -780,62 +843,6 @@ class ComposerPluginTest extends TestCase
         ));
 
         return $requestInstalls;
-    }
-
-    /**
-     * Wrap a package in a mocked alias.
-     *
-     * @param  object  $root
-     *
-     * @return ObjectProphecy
-     */
-    protected function makeAliasFor($root)
-    {
-        /** @var mixed $alias */
-        $alias = $this->prophesize('Composer\Package\RootAliasPackage');
-
-        $alias->getAliasOf()->willReturn($root);
-
-        $alias->getAliases()
-            ->will(function() use ($root) { return $root->getAliases(); });
-
-        $alias->getAutoload()
-            ->will(function() use ($root) { return $root->getAutoload(); });
-
-        $alias->getConflicts()
-            ->will(function() use ($root) { return $root->getConflicts(); });
-
-        $alias->getDevAutoload()
-            ->will(function() use ($root) { return $root->getDevAutoload(); });
-
-        $alias->getDevRequires()
-            ->will(function() use ($root) { return $root->getDevRequires(); });
-
-        $alias->getExtra()
-            ->will(function() use ($root) { return $root->getExtra(); });
-
-        $alias->getProvides()
-            ->will(function() use ($root) { return $root->getProvides(); });
-
-        $alias->getReferences()
-            ->will(function() use ($root) { return $root->getReferences(); });
-
-        $alias->getReplaces()
-            ->will(function() use ($root) { return $root->getReplaces(); });
-
-        $alias->getRepositories()
-            ->will(function() use ($root) { return $root->getRepositories(); });
-
-        $alias->getRequires()
-            ->will(function() use ($root) { return $root->getRequires(); });
-
-        $alias->getStabilityFlags()
-            ->will(function() use ($root) { return $root->getStabilityFlags(); });
-
-        $alias->getSuggests()
-            ->will(function() use ($root) { return $root->getSuggests(); });
-
-        return $alias;
     }
 
     /**

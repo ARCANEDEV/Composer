@@ -1,0 +1,6 @@
+{
+    "require": {
+        "arcanedev/composer":   "^1.3.0@dev",
+        "arcanedev/arcanesoft": "~1.0"
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "require": {
+        "arcanedev/composer": "^1.0-stable"
+    },
+    "extra": {
+        "merge-plugin": {
+            "include": [
+                "composer.local.json"
+            ]
+        }
+    },
+    "minimum-stability": "beta"
+}
