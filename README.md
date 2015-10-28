@@ -57,3 +57,7 @@ Coming soon ...
 ## Contribution
 
 Any ideas are welcome. Feel free to submit any issues or pull requests, please check the [contribution guidelines](CONTRIBUTING.md).
+
+## Credit
+
+This package is based on https://github.com/wikimedia/composer-merge-plugin.
