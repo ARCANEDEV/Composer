@@ -112,25 +112,8 @@ class StabilityFlags
         foreach ($requires as $name => $link) {
             /** @var Link $link */
             $version   = $link->getPrettyConstraint();
-            $stability = $this->getExplicitStability($version);
-
-            if ($stability === null) {
-                // Drop aliasing if used
-                $version = preg_replace('/^([^,\s@]) as .$/', '$1', $version);
-                $stability = $this->getStability(
-                    VersionParser::parseStability($version)
-                );
-
-                if (
-                    $stability === BasePackage::STABILITY_STABLE ||
-                    $this->minimumStability > $stability
-                ) {
-                    // Ignore if 'stable' or more stable than the global minimum
-                    $stability = null;
-                }
-            }
-
-            $name = strtolower($name);
+            $stability = $this->extractStability($version);
+            $name      = strtolower($name);
 
             if (isset($this->flags[$name]) && $this->flags[$name] > $stability) {
                 // Keep current if more unstable
@@ -145,6 +128,35 @@ class StabilityFlags
         });
     }
 
+    /**
+     * Extract stability.
+     *
+     * @param  string  $version
+     *
+     * @return mixed
+     */
+    private function extractStability($version)
+    {
+        $stability = $this->getExplicitStability($version);
+
+        if ($stability === null) {
+            // Drop aliasing if used
+            $version = preg_replace('/^([^,\s@]) as .$/', '$1', $version);
+            $stability = $this->getStability(
+                VersionParser::parseStability($version)
+            );
+
+            if (
+                $stability === BasePackage::STABILITY_STABLE ||
+                $this->minimumStability > $stability
+            ) {
+                // Ignore if 'stable' or more stable than the global minimum
+                $stability = null;
+            }
+        }
+
+        return $stability;
+    }
 
     /**
      * Extract the most unstable explicit stability (eg '@dev') from a version specification.
@@ -159,12 +171,14 @@ class StabilityFlags
         $pattern = $this->getPattern();
 
         foreach ($this->splitConstraints($version) as $constraint) {
-            if (preg_match($pattern, $constraint, $match)) {
-                $stability = $this->getStability($match[1]);
+            if ( ! preg_match($pattern, $constraint, $match)) {
+                continue;
+            }
 
-                if ($found === null || $stability > $found) {
-                    $found = $stability;
-                }
+            $stability = $this->getStability($match[1]);
+
+            if ($found === null || $stability > $found) {
+                $found = $stability;
             }
         }
 
