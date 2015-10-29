@@ -1,4 +1,5 @@
 <?php namespace Arcanedev\Composer\Entities;
+
 use Composer\Package\BasePackage;
 use Composer\Package\Link;
 use Composer\Package\Version\VersionParser;
@@ -29,13 +30,6 @@ class StabilityFlags
      */
     protected $minimumStability;
 
-    /**
-     * Regex to extract an explicit stability flag (eg '@dev')
-     *
-     * @var string
-     */
-    protected $pattern;
-
     /* ------------------------------------------------------------------------------------------------
      |  Constructor
      | ------------------------------------------------------------------------------------------------
@@ -50,10 +44,8 @@ class StabilityFlags
         array $flags = [],
         $minimumStability = BasePackage::STABILITY_STABLE
     ) {
-        $this->flags               = $flags;
-        $this->minimumStability    = $this->getStability($minimumStability);
-        $this->pattern             =
-            '/^[^@]*?@(' . implode('|', array_keys(BasePackage::$stabilities)) . ')$/i';
+        $this->flags            = $flags;
+        $this->minimumStability = $this->getStability($minimumStability);
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -67,13 +59,25 @@ class StabilityFlags
      *
      * @return int
      */
-    protected function getStability($name)
+    private function getStability($name)
     {
         $name = VersionParser::normalizeStability($name);
 
         return isset(BasePackage::$stabilities[$name]) ?
             BasePackage::$stabilities[$name] :
             BasePackage::STABILITY_STABLE;
+    }
+
+    /**
+     * Get regex pattern.
+     *
+     * @return string
+     */
+    private function getPattern()
+    {
+        $stabilities = BasePackage::$stabilities;
+
+        return '/^[^@]*?@(' . implode('|', array_keys($stabilities)) . ')$/i';
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -85,6 +89,7 @@ class StabilityFlags
      *
      * @param  array  $flags
      * @param  int    $minimumStability
+     * @param  array  $requires
      *
      * @return array
      */
@@ -150,10 +155,11 @@ class StabilityFlags
      */
     protected function getExplicitStability($version)
     {
-        $found = null;
+        $found   = null;
+        $pattern = $this->getPattern();
 
         foreach ($this->splitConstraints($version) as $constraint) {
-            if (preg_match($this->pattern, $constraint, $match)) {
+            if (preg_match($pattern, $constraint, $match)) {
                 $stability = $this->getStability($match[1]);
 
                 if ($found === null || $stability > $found) {
@@ -178,13 +184,11 @@ class StabilityFlags
      */
     protected function splitConstraints($version)
     {
-        $found = [];
+        $found   = [];
+        $pattern = '/(?<!^|as|[=>< ,]) *(?<!-)[, ](?!-) *(?!,|as|$)/';
 
         foreach (preg_split('/\s*\|\|?\s*/', trim($version)) as $constraints) {
-            $andConstraints = preg_split(
-                '/(?<!^|as|[=>< ,]) *(?<!-)[, ](?!-) *(?!,|as|$)/',
-                $constraints
-            );
+            $andConstraints = preg_split($pattern, $constraints);
 
             foreach ($andConstraints as $constraint) {
                 $found[] = $constraint;
