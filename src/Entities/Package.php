@@ -428,8 +428,8 @@ class Package
     /**
      * Get a full featured Package from a RootPackageInterface.
      *
-     * @param  RootPackageInterface  $root
-     * @param  string                $method
+     * @param  RootPackageInterface|RootPackage  $root
+     * @param  string                            $method
      *
      * @return RootPackageInterface|RootPackage
      */
