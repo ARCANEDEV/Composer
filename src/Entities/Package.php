@@ -3,7 +3,6 @@
 use Arcanedev\Composer\Utilities\Logger;
 use Arcanedev\Composer\Utilities\Util;
 use Composer\Composer;
-use Composer\Package\AliasPackage;
 use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
 use Composer\Package\Link;
@@ -12,7 +11,6 @@ use Composer\Package\RootPackage;
 use Composer\Package\RootPackageInterface;
 use Composer\Package\Version\VersionParser;
 use Composer\Repository\RepositoryManager;
-use UnexpectedValueException;
 
 /**
  * Class     Package
@@ -134,7 +132,7 @@ class Package
             $this->addRepository($repoManager, $repositories, $repoJson);
         }
 
-        self::castRootPackage($root)
+        self::unwrapIfNeeded($root, 'setRepositories')
             ->setRepositories(array_merge($repositories, $root->getRepositories()));
     }
 
@@ -252,7 +250,7 @@ class Package
 
         if (empty($autoload)) return;
 
-        self::castRootPackage($root)
+        self::unwrapIfNeeded($root, 'setAutoload')
             ->setAutoload(array_merge_recursive(
                 $root->getAutoload(), Util::fixRelativePaths($this->path, $autoload)
             ));
@@ -269,7 +267,7 @@ class Package
 
         if (empty($autoload)) return;
 
-        self::castRootPackage($root)
+        self::unwrapIfNeeded($root, 'setDevAutoload')
             ->setDevAutoload(array_merge_recursive(
                 $root->getDevAutoload(), Util::fixRelativePaths($this->path, $autoload)
             ));
@@ -286,7 +284,7 @@ class Package
     {
         $flags = $this->loadFlags($root, $requires);
 
-        self::castRootPackage($root)
+        self::unwrapIfNeeded($root, 'setStabilityFlags')
             ->setStabilityFlags($flags);
     }
 
@@ -373,12 +371,16 @@ class Package
 
         if (empty($conflicts)) return;
 
-        if ($root instanceof RootAliasPackage) {
-            $this->logger->warning('Aliased packages do not support conflict merging.');
+        $unwrapped = self::unwrapIfNeeded($root, 'setConflicts');
+
+        if ($root !== $unwrapped) {
+            $this->logger->warning(
+                'This Composer version does not support ' .
+                "'conflicts' merging for aliased packages."
+            );
         }
 
-        self::castRootPackage($root)
-            ->setconflicts(array_merge($root->getConflicts(), $conflicts));
+        $unwrapped->setConflicts(array_merge($root->getConflicts(), $conflicts));
     }
 
     /**
@@ -392,12 +394,16 @@ class Package
 
         if (empty($replaces)) return;
 
-        if ($root instanceof RootAliasPackage) {
-            $this->logger->warning('Aliased packages do not support replace merging.');
+        $unwrapped = self::unwrapIfNeeded($root, 'setReplaces');
+
+        if ($root !== $unwrapped) {
+            $this->logger->warning(
+                'This Composer version does not support ' .
+                "'replaces' merging for aliased packages."
+            );
         }
 
-        self::castRootPackage($root)
-            ->setReplaces(array_merge($root->getReplaces(), $replaces));
+        $unwrapped->setReplaces(array_merge($root->getReplaces(), $replaces));
     }
 
     /**
@@ -407,16 +413,20 @@ class Package
      */
     protected function mergeProvides(RootPackageInterface $root)
     {
-        $provides = $this->package->getProvides();
+        $provides  = $this->package->getProvides();
 
         if (empty($provides)) return;
 
-        if ($root instanceof RootAliasPackage) {
-            $this->logger->warning('Aliased packages do not support provide merging.');
+        $unwrapped = self::unwrapIfNeeded($root, 'setProvides');
+
+        if ($root !== $unwrapped) {
+            $this->logger->warning(
+                'This Composer version does not support ' .
+                "'provides' merging for aliased packages."
+            );
         }
 
-        self::castRootPackage($root)
-            ->setProvides(array_merge($root->getProvides(), $provides));
+        $unwrapped->setProvides(array_merge($root->getProvides(), $provides));
     }
 
     /**
@@ -430,7 +440,7 @@ class Package
 
         if (empty($suggests)) return;
 
-        self::castRootPackage($root)
+        self::unwrapIfNeeded($root, 'setSuggests')
             ->setSuggests(array_merge($root->getSuggests(), $suggests));
     }
 
@@ -442,17 +452,18 @@ class Package
      */
     private function mergeExtra(RootPackageInterface $root, PluginState $state)
     {
-        $extra = $this->package->getExtra();
+        $extra     = $this->package->getExtra();
+        $unwrapped = self::unwrapIfNeeded($root, 'setExtra');
+
         unset($extra['merge-plugin']);
 
         if ( ! $state->shouldMergeExtra() || empty($extra)) {
             return;
         }
 
-        $mergedExtra = $this->getExtra($root, $state, $extra);
+        $mergedExtra = $this->getExtra($unwrapped, $state, $extra);
 
-        self::castRootPackage($root)
-            ->setExtra($mergedExtra);
+        $unwrapped->setExtra($mergedExtra);
     }
 
     /**
@@ -465,9 +476,7 @@ class Package
      * @return array
      */
     private function getExtra(
-        RootPackageInterface $root,
-        PluginState $state,
-        $extra
+        RootPackageInterface $root, PluginState $state, $extra
     ) {
         $rootExtra   = $root->getExtra();
         $mergedExtra = array_merge($rootExtra, $extra);
@@ -488,25 +497,23 @@ class Package
     }
 
     /**
-     * Get the RootPackage from the interface.
+     * Get a full featured Package from a RootPackageInterface.
      *
      * @param  RootPackageInterface  $root
+     * @param  string                $method
      *
-     * @return RootPackage
+     * @return RootPackageInterface|RootPackage
      */
-    private static function castRootPackage(RootPackageInterface $root)
-    {
-        if ($root instanceof AliasPackage) {
+    private static function unwrapIfNeeded(
+        RootPackageInterface $root, $method = 'setExtra'
+    ) {
+        if (
+            $root instanceof RootAliasPackage &&
+            ! method_exists($root, $method)
+        ) {
+            // Unwrap and return the aliased RootPackage.
             $root = $root->getAliasOf();
         }
-
-        // @codeCoverageIgnoreStart
-        if ( ! $root instanceof RootPackage) {
-            throw new UnexpectedValueException(
-                'Expected instance of RootPackage, got ' . get_class($root)
-            );
-        }
-        // @codeCoverageIgnoreEnd
 
         return $root;
     }
