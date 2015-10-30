@@ -33,6 +33,8 @@ class Logger
      | ------------------------------------------------------------------------------------------------
      */
     /**
+     * Make Logger instance.
+     *
      * @param  string       $name
      * @param  IOInterface  $io
      */

@@ -14,35 +14,30 @@ class PluginState
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /**
-     * @var Composer $composer
-     */
+    /** @var Composer */
     protected $composer;
 
-    /**
-     * @var array $includes
-     */
+    /** @var array */
     protected $includes = [];
 
-    /**
-     * @var array $duplicateLinks
-     */
+    /** @var array */
     protected $duplicateLinks = [];
 
-    /**
-     * @var bool $devMode
-     */
+    /** @var bool */
     protected $devMode = false;
 
-    /**
-     * @var bool $recurse
-     */
+    /** @var bool */
     protected $recurse = true;
 
-    /**
-     * @var bool $replace
-     */
+    /** @var bool */
     protected $replace = false;
+
+    /**
+     * Whether to merge the -dev sections.
+     *
+     * @var bool
+     */
+    protected $mergeDev = true;
 
     /**
      * Whether to merge the extra section.
@@ -53,28 +48,20 @@ class PluginState
      * When enabled, 'first wins' is the default behaviour. If Replace mode is activated
      * then 'last wins' is used.
      *
-     * @var bool $mergeExtra
+     * @var bool
      */
     protected $mergeExtra = false;
 
-    /**
-     * @var bool $firstInstall
-     */
+    /** @var bool */
     protected $firstInstall = false;
 
-    /**
-     * @var bool $locked
-     */
+    /** @var bool */
     protected $locked = false;
 
-    /**
-     * @var bool $dumpAutoloader
-     */
+    /** @var bool */
     protected $dumpAutoloader = false;
 
-    /**
-     * @var bool $optimizeAutoloader
-     */
+    /** @var bool */
     protected $optimizeAutoloader = false;
 
     /* ------------------------------------------------------------------------------------------------
@@ -82,6 +69,8 @@ class PluginState
      | ------------------------------------------------------------------------------------------------
      */
     /**
+     * Make PluginState instance.
+     *
      * @param  Composer  $composer
      */
     public function __construct(Composer $composer)
@@ -94,7 +83,7 @@ class PluginState
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Get list of filenames and/or glob patterns to include
+     * Get list of filenames and/or glob patterns to include.
      *
      * @return array
      */
@@ -104,7 +93,7 @@ class PluginState
     }
 
     /**
-     * Set the first install flag
+     * Set the first install flag.
      *
      * @param  bool  $flag
      *
@@ -118,7 +107,7 @@ class PluginState
     }
 
     /**
-     * Is this the first time that the plugin has been installed?
+     * Is this the first time that the plugin has been installed ?
      *
      * @return bool
      */
@@ -128,7 +117,7 @@ class PluginState
     }
 
     /**
-     * Set the locked flag
+     * Set the locked flag.
      *
      * @param  bool  $flag
      *
@@ -142,7 +131,7 @@ class PluginState
     }
 
     /**
-     * Was a lockfile present when the plugin was installed?
+     * Was a lockfile present when the plugin was installed ?
      *
      * @return bool
      */
@@ -152,9 +141,9 @@ class PluginState
     }
 
     /**
-     * Should an update be forced?
+     * Should an update be forced ?
      *
-     * @return bool  True if packages are not locked
+     * @return bool
      */
     public function forceUpdate()
     {
@@ -162,7 +151,7 @@ class PluginState
     }
 
     /**
-     * Set the devMode flag
+     * Set the devMode flag.
      *
      * @param  bool  $flag
      *
@@ -176,17 +165,17 @@ class PluginState
     }
 
     /**
-     * Should devMode settings be processed?
+     * Should devMode settings be processed ?
      *
      * @return bool
      */
     public function isDevMode()
     {
-        return $this->devMode;
+        return $this->mergeDev && $this->devMode;
     }
 
     /**
-     * Set the dumpAutoloader flag
+     * Set the dumpAutoloader flag.
      *
      * @param  bool  $flag
      *
@@ -200,7 +189,7 @@ class PluginState
     }
 
     /**
-     * Is the autoloader file supposed to be written out?
+     * Is the autoloader file supposed to be written out ?
      *
      * @return bool
      */
@@ -210,7 +199,7 @@ class PluginState
     }
 
     /**
-     * Set the optimizeAutoloader flag
+     * Set the optimizeAutoloader flag.
      *
      * @param  bool  $flag
      *
@@ -224,7 +213,7 @@ class PluginState
     }
 
     /**
-     * Should the autoloader be optimized?
+     * Should the autoloader be optimized ?
      *
      * @return bool
      */
@@ -234,9 +223,9 @@ class PluginState
     }
 
     /**
-     * Add duplicate packages
+     * Add duplicate packages.
      *
-     * @param  string  $type      Package type
+     * @param  string  $type
      * @param  array   $packages
      *
      * @return self
@@ -256,9 +245,9 @@ class PluginState
     }
 
     /**
-     * Get duplicate packages
+     * Get duplicate packages.
      *
-     * @param  string  $type  Package type
+     * @param  string  $type
      *
      * @return array
      */
@@ -270,7 +259,7 @@ class PluginState
     }
 
     /**
-     * Should includes be recursively processed?
+     * Should includes be recursively processed ?
      *
      * @return bool
      */
@@ -280,7 +269,7 @@ class PluginState
     }
 
     /**
-     * Should duplicate links be replaced in a 'last definition wins' order?
+     * Should duplicate links be replaced in a 'last definition wins' order ?
      *
      * @return bool
      */
@@ -290,7 +279,7 @@ class PluginState
     }
 
     /**
-     * Should the extra section be merged?
+     * Should the extra section be merged ?
      *
      * By default, the extra section is not merged and there will be many cases where
      * the merge of the extra section is performed too late to be of use to other plugins.
@@ -310,25 +299,25 @@ class PluginState
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Load plugin settings
+     * Load plugin settings.
      */
     public function loadSettings()
     {
-        $extra          = $this->composer->getPackage()->getExtra();
-        $config         = $this->mergeConfig($extra);
-        $this->includes = is_array($config['include'])
-            ? $config['include']
-            : [
-                $config['include']
-            ];
-
+        $extra            = $this->composer->getPackage()->getExtra();
+        $config           = $this->mergeConfig($extra);
+        $this->includes   = is_array($config['include']) ? $config['include'] : [$config['include']];
         $this->recurse    = (bool) $config['recurse'];
         $this->replace    = (bool) $config['replace'];
+        $this->mergeDev   = (bool) $config['merge-dev'];
         $this->mergeExtra = (bool) $config['merge-extra'];
     }
 
+    /* ------------------------------------------------------------------------------------------------
+     |  Other Functions
+     | ------------------------------------------------------------------------------------------------
+     */
     /**
-     * Merge config
+     * Merge config.
      *
      * @param  array  $extra
      *
@@ -341,6 +330,7 @@ class PluginState
                 'include'     => [],
                 'recurse'     => true,
                 'replace'     => false,
+                'merge-dev'   => true,
                 'merge-extra' => false,
             ],
             isset($extra['merge-plugin']) ? $extra['merge-plugin'] : []

@@ -17,14 +17,14 @@ class StabilityFlags
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Current package name => stability mappings
+     * Current package name => stability mappings.
      *
      * @var array
      */
     protected $flags;
 
     /**
-     * Current default minimum stability
+     * Current default minimum stability.
      *
      * @var int
      */
@@ -102,8 +102,9 @@ class StabilityFlags
      * Extract and merge stability flags from the given collection of
      * requires with another collection of stability flags.
      *
-     * @param array $requires New package name => link mappings
-     * @return array Unified package name => stability mappings
+     * @param  array  $requires  New package name => link mappings
+     *
+     * @return array             Unified package name => stability mappings
      */
     public function extractAll(array $requires)
     {

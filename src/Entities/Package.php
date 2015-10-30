@@ -21,29 +21,19 @@ class Package
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /**
-     * @var Composer $composer
-     */
+    /** @var Composer $composer */
     protected $composer;
 
-    /**
-     * @var Logger $logger
-     */
+    /** @var Logger $logger */
     protected $logger;
 
-    /**
-     * @var string $path
-     */
+    /** @var string $path */
     protected $path;
 
-    /**
-     * @var array $json
-     */
+    /** @var array $json */
     protected $json;
 
-    /**
-     * @var CompletePackage $package
-     */
+    /** @var CompletePackage $package */
     protected $package;
 
     /* ------------------------------------------------------------------------------------------------
@@ -53,7 +43,7 @@ class Package
     /**
      * Make a Package instance.
      *
-     * @param  string    $path      Path to composer.json file
+     * @param  string    $path
      * @param  Composer  $composer
      * @param  Logger    $logger
      */
@@ -89,7 +79,7 @@ class Package
      | ------------------------------------------------------------------------------------------------
      */
     /**
-     * Merge this package into a RootPackage
+     * Merge this package into a RootPackage.
      *
      * @param  RootPackageInterface  $root
      * @param  PluginState           $state
@@ -99,15 +89,17 @@ class Package
         $this->addRepositories($root);
 
         $this->mergeRequires($root, $state);
-        $this->mergeDevRequires($root, $state);
+        $this->mergeAutoload($root);
+
+        if ($state->isDevMode()) {
+            $this->mergeDevRequires($root, $state);
+            $this->mergeDevAutoload($root);
+        }
 
         $this->mergeConflicts($root);
         $this->mergeReplaces($root);
         $this->mergeProvides($root);
         $this->mergeSuggests($root);
-
-        $this->mergeAutoload($root);
-        $this->mergeDevAutoload($root);
 
         $this->mergeExtra($root, $state);
     }
@@ -214,7 +206,7 @@ class Package
      *
      * @param  array  $origin          Primary collection
      * @param  array  $merge           Additional collection
-     * @param  bool   $replace         Replace exising links?
+     * @param  bool   $replace         Replace existing links ?
      * @param  array  $duplicateLinks  Duplicate storage
      *
      * @return array                   Merged collection
@@ -275,7 +267,7 @@ class Package
      * requires and merge them into a RootPackage.
      *
      * @param  RootPackageInterface  $root
-     * @param  array        $requires
+     * @param  array                 $requires
      */
     private function mergeStabilityFlags(RootPackageInterface $root, array $requires)
     {

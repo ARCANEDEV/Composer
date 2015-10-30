@@ -660,13 +660,41 @@ class ComposerPluginTest extends TestCase
     }
 
     /**
+     * Given a root package with merge-dev=false
+     *   and an include with require-dev and autoload-dev sections
+     * When the plugin is run
+     * Then the -dev sections are not merged
+     */
+    public function it_can_skip_merge_dev_if_false()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('skip-merge-dev-if-false');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setRequires(Argument::type('array'))
+            ->will(function ($args) use ($that) {
+                $requires = $args[0];
+                $that->assertEquals(2, count($requires));
+                $that->assertArrayHasKey('arcanedev/composer', $requires);
+                $that->assertArrayHasKey('arcanedev/foo', $requires);
+            })->shouldBeCalled();
+
+        $root->setDevRequires(Argument::type('array'))->shouldNotBeCalled();
+        $root->setRepositories(Argument::type('array'))->shouldNotBeCalled();
+
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+
+        $this->assertCount(0, $extraInstalls);
+    }
+
+    /**
      * @test
      *
      * Given a root package with a branch alias
      * When the plugin is run
      * Then the root package will be unwrapped from the alias.
      */
-    public function test_has_branch_alias()
+    public function it_has_branch_alias()
     {
         $that = $this;
         $io   = $this->io;

@@ -45,7 +45,7 @@ class PackageJson
     }
 
     /**
-     * Convert json to Package
+     * Convert json to Package.
      *
      * @param  array  $json
      *

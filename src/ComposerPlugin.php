@@ -46,19 +46,13 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /**
-     * @var Composer $composer
-     */
+    /** @var Composer $composer */
     protected $composer;
 
-    /**
-     * @var PluginState $state
-     */
+    /** @var PluginState $state */
     protected $state;
 
-    /**
-     * @var Logger $logger
-     */
+    /** @var Logger $logger */
     protected $logger;
 
     /**
@@ -130,7 +124,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * Install requirements
+     * Install requirements.
      *
      * @param  Request  $request
      * @param  Link[]   $links
@@ -253,7 +247,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * Run first install
+     * Run first install.
      *
      * @param  Event  $event
      *
@@ -268,8 +262,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         $preferDist   = $config->get('preferred-install') == 'dist';
         $installer    = Installer::create(
             $event->getIO(),
-            // Create a new Composer instance to ensure full processing of
-            // the merged files.
+            // Create a new Composer instance to ensure full processing of the merged files.
             Factory::create($event->getIO(), null, false)
         );
 
