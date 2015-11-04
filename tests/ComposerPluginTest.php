@@ -791,6 +791,45 @@ class ComposerPluginTest extends TestCase
         $this->triggerPlugin($root->reveal(), $dir);
     }
 
+    /** @test */
+    public function it_can_replace_link_with_self_version_as_constraint()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('replace-link-with-self-version-as-constraint');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setReplaces(Argument::type('array'))
+             ->will(function ($args) use ($that) {
+                 $replace = $args[0];
+                 $that->assertEquals(3, count($replace));
+
+                 $that->assertArrayHasKey('foo/bar', $replace);
+                 $that->assertArrayHasKey('foo/baz', $replace);
+                 $that->assertArrayHasKey('foo/xyzzy', $replace);
+
+                 $that->assertInstanceOf('Composer\Package\Link', $replace['foo/bar']);
+                 $that->assertInstanceOf('Composer\Package\Link', $replace['foo/baz']);
+                 $that->assertInstanceOf('Composer\Package\Link', $replace['foo/xyzzy']);
+
+                 $that->assertEquals(
+                     '1.2.3.4', $replace['foo/bar']->getPrettyConstraint()
+                 );
+
+                 $that->assertEquals(
+                     '1.2.3.4', $replace['foo/baz']->getPrettyConstraint()
+                 );
+
+                 $that->assertEquals(
+                     '~1.0', $replace['foo/xyzzy']->getPrettyConstraint()
+                 );
+             });
+
+        $root->getRequires()->shouldNotBeCalled();
+
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+        $this->assertEquals(0, count($extraInstalls));
+    }
+
     /* ------------------------------------------------------------------------------------------------
      |  Other Functions
      | ------------------------------------------------------------------------------------------------

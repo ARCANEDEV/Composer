@@ -3,10 +3,13 @@
 use Arcanedev\Composer\Utilities\Logger;
 use Arcanedev\Composer\Utilities\Util;
 use Composer\Composer;
+use Composer\Package\BasePackage;
 use Composer\Package\CompletePackage;
+use Composer\Package\Link;
 use Composer\Package\RootAliasPackage;
 use Composer\Package\RootPackage;
 use Composer\Package\RootPackageInterface;
+use Composer\Package\Version\VersionParser;
 use Composer\Repository\RepositoryManager;
 
 /**
@@ -164,6 +167,9 @@ class Package
         $this->mergeStabilityFlags($root, $requires);
 
         $duplicateLinks = [];
+        $requires       = $this->replaceSelfVersionDependencies(
+            'require', $requires, $root
+        );
 
         $root->setRequires($this->mergeLinks(
             $root->getRequires(),
@@ -190,6 +196,9 @@ class Package
         $this->mergeStabilityFlags($root, $requires);
 
         $duplicateLinks = [];
+        $requires       = $this->replaceSelfVersionDependencies(
+            'require-dev', $requires, $root
+        );
 
         $root->setDevRequires($this->mergeLinks(
             $root->getDevRequires(),
@@ -199,6 +208,38 @@ class Package
         ));
 
         $state->addDuplicateLinks('require-dev', $duplicateLinks);
+    }
+
+    /**
+     * Update Links with a 'self.version' constraint with the root package's version.
+     *
+     * @param  string                $type
+     * @param  array                 $links
+     * @param  RootPackageInterface  $root
+     *
+     * @return array
+     */
+    protected function replaceSelfVersionDependencies(
+        $type, array $links, RootPackageInterface $root
+    ) {
+        $linkType      = BasePackage::$supportedLinkTypes[$type];
+        $version       = $root->getVersion();
+        $prettyVersion = $root->getPrettyVersion();
+        $vp            = new VersionParser;
+
+        return array_map(function (Link $link) use ($linkType, $version, $prettyVersion, $vp) {
+            if ('self.version' === $link->getPrettyConstraint()) {
+                return new Link(
+                    $link->getSource(),
+                    $link->getTarget(),
+                    $vp->parseConstraints($version),
+                    $linkType['description'],
+                    $prettyVersion
+                );
+            }
+
+            return $link;
+        }, $links);
     }
 
     /**
@@ -301,7 +342,10 @@ class Package
             );
         }
 
-        $unwrapped->setConflicts(array_merge($root->getConflicts(), $conflicts));
+        $unwrapped->setConflicts(array_merge(
+            $root->getConflicts(),
+            $this->replaceSelfVersionDependencies('conflict', $conflicts, $root)
+        ));
     }
 
     /**
@@ -324,7 +368,10 @@ class Package
             );
         }
 
-        $unwrapped->setReplaces(array_merge($root->getReplaces(), $replaces));
+        $unwrapped->setReplaces(array_merge(
+            $root->getReplaces(),
+            $this->replaceSelfVersionDependencies('replace', $replaces, $root)
+        ));
     }
 
     /**
@@ -347,7 +394,10 @@ class Package
             );
         }
 
-        $unwrapped->setProvides(array_merge($root->getProvides(), $provides));
+        $unwrapped->setProvides(array_merge(
+            $root->getProvides(),
+            $this->replaceSelfVersionDependencies('provide', $provides, $root)
+        ));
     }
 
     /**
