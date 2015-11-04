@@ -33,26 +33,33 @@
 $ composer require arcanedev/composer
 ```
 
-#### OR
+## Usage
 
 ```json
 {
     "require": {
         "arcanedev/composer": "~1.0"
     },
+    "extra": {
+        "merge-plugin": {
+            "include": [
+                "composer.local.json",
+                "modules/*/composer.json"
+            ],
+            "recurse":     true,
+            "replace":     false,
+            "merge-dev":   true,
+            "merge-extra": false
+        }
+    }
 }
 ```
 
-And running `composer install` or `composer update`.
+### Plugin configuration
 
-## Usage
+The plugin reads its configuration from the `merge-plugin` section of your composer.json's `extra` section.
 
-Coming soon ...
-
-## TODOS
-
-  - [ ] Documentation (Wiki)
-  - [x] Examples
+An `include` setting is required to tell Composer Plugin which file(s) going to be merged.
 
 ## Contribution
 
