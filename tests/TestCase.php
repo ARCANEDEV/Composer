@@ -1,6 +1,8 @@
 <?php namespace Arcanedev\Composer\Tests;
 
 use Composer\Package\BasePackage;
+use Composer\Package\Link;
+use Composer\Package\Version\VersionParser;
 use PHPUnit_Framework_TestCase;
 use Prophecy\Argument;
 use Prophecy\Prophecy\ObjectProphecy;
@@ -40,6 +42,8 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
         $json = json_decode(file_get_contents($file), true);
         $data = array_merge(
             [
+                'name'              => '__root__',
+                'version'           => '1.0.0',
                 'repositories'      => [],
                 'require'           => [],
                 'require-dev'       => [],
@@ -55,8 +59,26 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
             $json
         );
 
+        // Convert packages to proper links
+        $vp = new VersionParser;
+
+        foreach (['require', 'require-dev', 'conflict', 'replace', 'provide'] as $type) {
+            $lt = BasePackage::$supportedLinkTypes[$type];
+
+            foreach ($data[$type] as $k => $v) {
+                unset($data[$type][$k]);
+                if ($v === 'self.version') { $v = $data['version']; }
+
+                $data[$type][strtolower($k)] = new Link(
+                    $data['name'], $k, $vp->parseConstraints($v), $lt['description'], $v
+                );
+            }
+        }
+
         /** @var mixed $root */
         $root = $this->prophesize('Composer\\Package\\RootPackage');
+        $root->getVersion()->willReturn($vp->normalize($data['version']));
+        $root->getPrettyVersion()->willReturn($data['version']);
         $root->getRequires()->willReturn($data['require'])->shouldBeCalled();
         $root->getDevRequires()->willReturn($data['require-dev']);
         $root->getRepositories()->willReturn($data['repositories']);
@@ -69,13 +91,12 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
         $root->getDevAutoload()->willReturn($data['autoload-dev']);
         $root->getStabilityFlags()->willReturn([]);
         $root->getMinimumStability()->willReturn($data['minimum-stability']);
-        $root->setStabilityFlags(Argument::type('array'))->will(
-            function ($args) use ($that) {
+        $root->setStabilityFlags(Argument::type('array'))
+            ->will(function ($args) use ($that) {
                 foreach ($args[0] as $key => $value) {
                     $that->assertContains($value, BasePackage::$stabilities);
                 }
-            }
-        );
+            });
 
 
         return $root;
@@ -95,47 +116,53 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
 
         $alias->getAliasOf()->willReturn($root);
 
+        $alias->getVersion()
+            ->will(function () use ($root) { return $root->getVersion(); });
+
+        $alias->getPrettyVersion()
+            ->will(function () use ($root) { return $root->getPrettyVersion(); });
+
         $alias->getAliases()
-            ->will(function() use ($root) { return $root->getAliases(); });
+            ->will(function () use ($root) { return $root->getAliases(); });
 
         $alias->getAutoload()
-            ->will(function() use ($root) { return $root->getAutoload(); });
+            ->will(function () use ($root) { return $root->getAutoload(); });
 
         $alias->getConflicts()
-            ->will(function() use ($root) { return $root->getConflicts(); });
+            ->will(function () use ($root) { return $root->getConflicts(); });
 
         $alias->getDevAutoload()
-            ->will(function() use ($root) { return $root->getDevAutoload(); });
+            ->will(function () use ($root) { return $root->getDevAutoload(); });
 
         $alias->getDevRequires()
-            ->will(function() use ($root) { return $root->getDevRequires(); });
+            ->will(function () use ($root) { return $root->getDevRequires(); });
 
         $alias->getExtra()
-            ->will(function() use ($root) { return $root->getExtra(); });
+            ->will(function () use ($root) { return $root->getExtra(); });
 
         $alias->getProvides()
-            ->will(function() use ($root) { return $root->getProvides(); });
+            ->will(function () use ($root) { return $root->getProvides(); });
 
         $alias->getReferences()
-            ->will(function() use ($root) { return $root->getReferences(); });
+            ->will(function () use ($root) { return $root->getReferences(); });
 
         $alias->getReplaces()
-            ->will(function() use ($root) { return $root->getReplaces(); });
+            ->will(function () use ($root) { return $root->getReplaces(); });
 
         $alias->getRepositories()
-            ->will(function() use ($root) { return $root->getRepositories(); });
+            ->will(function () use ($root) { return $root->getRepositories(); });
 
         $alias->getRequires()
-            ->will(function() use ($root) { return $root->getRequires(); });
+            ->will(function () use ($root) { return $root->getRequires(); });
 
         $alias->getStabilityFlags()
-            ->will(function() use ($root) { return $root->getStabilityFlags(); });
+            ->will(function () use ($root) { return $root->getStabilityFlags(); });
 
         $alias->getMinimumStability()
-            ->will(function() use ($root) { return $root->getMinimumStability(); });
+            ->will(function () use ($root) { return $root->getMinimumStability(); });
 
         $alias->getSuggests()
-            ->will(function() use ($root) { return $root->getSuggests(); });
+            ->will(function () use ($root) { return $root->getSuggests(); });
 
         return $alias;
     }
