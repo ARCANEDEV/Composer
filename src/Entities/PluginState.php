@@ -21,6 +21,9 @@ class PluginState
     protected $includes = [];
 
     /** @var array */
+    protected $requires = [];
+
+    /** @var array */
     protected $duplicateLinks = [];
 
     /** @var bool */
@@ -245,6 +248,26 @@ class PluginState
     }
 
     /**
+     * Should includes be recursively processed ?
+     *
+     * @return bool
+     */
+    public function recurseIncludes()
+    {
+        return $this->recurse;
+    }
+
+    /**
+     * Get list of filenames and/or glob patterns to require
+     *
+     * @return array
+     */
+    public function getRequires()
+    {
+        return $this->requires;
+    }
+
+    /**
      * Get duplicate packages.
      *
      * @param  string  $type
@@ -256,16 +279,6 @@ class PluginState
         return isset($this->duplicateLinks[$type])
             ? $this->duplicateLinks[$type]
             : [];
-    }
-
-    /**
-     * Should includes be recursively processed ?
-     *
-     * @return bool
-     */
-    public function recurseIncludes()
-    {
-        return $this->recurse;
     }
 
     /**
@@ -306,6 +319,7 @@ class PluginState
         $extra            = $this->composer->getPackage()->getExtra();
         $config           = $this->mergeConfig($extra);
         $this->includes   = is_array($config['include']) ? $config['include'] : [$config['include']];
+        $this->requires   = is_array($config['require']) ? $config['require'] : [$config['require']];
         $this->recurse    = (bool) $config['recurse'];
         $this->replace    = (bool) $config['replace'];
         $this->mergeDev   = (bool) $config['merge-dev'];
@@ -328,6 +342,7 @@ class PluginState
         return array_merge(
             [
                 'include'     => [],
+                'require'     => [],
                 'recurse'     => true,
                 'replace'     => false,
                 'merge-dev'   => true,

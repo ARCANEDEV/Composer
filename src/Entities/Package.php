@@ -64,6 +64,20 @@ class Package
      | ------------------------------------------------------------------------------------------------
      */
     /**
+     * Get list of additional packages to require if precessing recursively.
+     *
+     * @return array
+     */
+    public function getRequires()
+    {
+        if (isset($this->json['extra']['merge-plugin']['require'])) {
+            return $this->json['extra']['merge-plugin']['require'];
+        }
+
+        return [];
+    }
+
+    /**
      * Get list of additional packages to include if precessing recursively.
      *
      * @return array

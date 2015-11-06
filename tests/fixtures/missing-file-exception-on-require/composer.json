@@ -1,0 +1,10 @@
+{
+    "require": {
+        "arcanedev/composer": "~1.0"
+    },
+    "extra": {
+        "merge-plugin": {
+            "require": "glob/*.json"
+        }
+    }
+}

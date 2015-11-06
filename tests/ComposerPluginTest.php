@@ -95,6 +95,41 @@ class ComposerPluginTest extends TestCase
         }
     }
 
+    /**
+     * @test
+     *
+     * @expectedException         \Arcanedev\Composer\Exceptions\MissingFileException
+     * @expectedExceptionMessage  merge-plugin: No files matched required 'glob/*.json'
+     */
+    public function it_must_throw_missing_file_exception_on_require()
+    {
+        $dir  = $this->fixtureDir('missing-file-exception-on-require');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->getRequires()->shouldNotBeCalled();
+        $this->triggerPlugin($root->reveal(), $dir);
+    }
+
+    /** @test */
+    public function it_can_require()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('require');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setRequires(Argument::type('array'))->will(
+            function ($args) use ($that) {
+                $requires = $args[0];
+                $that->assertEquals(1, count($requires));
+                $that->assertArrayHasKey('monolog/monolog', $requires);
+            }
+        );
+
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+
+        $this->assertEquals(0, count($extraInstalls));
+    }
+
     /** @test */
     public function it_can_one_merge_no_conflicts()
     {
