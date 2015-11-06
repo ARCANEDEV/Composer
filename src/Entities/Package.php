@@ -456,9 +456,7 @@ class Package
             return $mergedExtra;
         }
 
-        foreach ($extra as $key => $value) {
-            if ( ! isset($rootExtra[$key])) continue;
-
+        foreach (array_intersect(array_keys($extra), array_keys($rootExtra)) as $key) {
             $this->logger->info(
                 "Ignoring duplicate <comment>{$key}</comment> in <comment>{$this->path}</comment> extra config."
             );

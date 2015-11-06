@@ -45,7 +45,7 @@ class StabilityFlags
         $minimumStability = BasePackage::STABILITY_STABLE
     ) {
         $this->flags            = $flags;
-        $this->minimumStability = $this->getStability($minimumStability);
+        $this->minimumStability = $this->getStabilityInteger($minimumStability);
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ class StabilityFlags
      *
      * @return int
      */
-    private function getStability($name)
+    private function getStabilityInteger($name)
     {
         $name = VersionParser::normalizeStability($name);
 
@@ -112,16 +112,10 @@ class StabilityFlags
 
         foreach ($requires as $name => $link) {
             /** @var Link $link */
-            $version   = $link->getPrettyConstraint();
-            $stability = $this->extractStability($version);
-            $name      = strtolower($name);
-
-            if (isset($this->flags[$name]) && $this->flags[$name] > $stability) {
-                // Keep current if more unstable
-                $stability = $this->flags[$name];
-            }
-
-            $flags[$name] = $stability;
+            $version      = $link->getPrettyConstraint();
+            $stability    = $this->extractStability($version);
+            $name         = strtolower($name);
+            $flags[$name] = max($stability, $this->getCurrentStability($name));
         }
 
         return array_filter($flags, function($v) {
@@ -141,19 +135,7 @@ class StabilityFlags
         $stability = $this->getExplicitStability($version);
 
         if ($stability === null) {
-            // Drop aliasing if used
-            $version = preg_replace('/^([^,\s@]) as .$/', '$1', $version);
-            $stability = $this->getStability(
-                VersionParser::parseStability($version)
-            );
-
-            if (
-                $stability === BasePackage::STABILITY_STABLE ||
-                $this->minimumStability > $stability
-            ) {
-                // Ignore if 'stable' or more stable than the global minimum
-                $stability = null;
-            }
+            $stability = $this->getParsedStability($version);
         }
 
         return $stability;
@@ -176,14 +158,44 @@ class StabilityFlags
                 continue;
             }
 
-            $stability = $this->getStability($match[1]);
-
-            if ($found === null || $stability > $found) {
-                $found = $stability;
-            }
+            $stability = $this->getStabilityInteger($match[1]);
+            $found     = max($stability, $found);
         }
 
         return $found;
+    }
+
+    /**
+     * Get the stability of a version
+     *
+     * @param  string  $version
+     *
+     * @return int|null
+     */
+    private function getParsedStability($version)
+    {
+        // Drop aliasing if used
+        $version   = preg_replace('/^([^,\s@]+) as .+$/', '$1', $version);
+        $stability = $this->getStabilityInteger(VersionParser::parseStability($version));
+
+        if ($stability === BasePackage::STABILITY_STABLE || $this->minimumStability > $stability) {
+            // Ignore if 'stable' or more stable than the global minimum
+            $stability = null;
+        }
+
+        return $stability;
+    }
+
+    /**
+     * Get the current stability of a given package.
+     *
+     * @param  string  $name
+     *
+     * @return int|null
+     */
+    protected function getCurrentStability($name)
+    {
+        return isset($this->flags[$name]) ? $this->flags[$name] : null;
     }
 
     /* ------------------------------------------------------------------------------------------------
