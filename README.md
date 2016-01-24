@@ -1,4 +1,4 @@
-# Composer Plugin [![Packagist License][badge_license]](LICENSE.md)
+# Composer Plugin [![Packagist License][badge_license]](LICENSE.md) [![For PHP][badge_php]](https://github.com/ARCANEDEV/Composer)
 
 [![Travis Status][badge_build]](https://travis-ci.org/ARCANEDEV/Composer)
 [![HHVM Status][badge_hhvm]](http://hhvm.h4cc.de/package/arcanedev/composer)
@@ -12,7 +12,7 @@
 [![Packagist Downloads][badge_downloads]](https://packagist.org/packages/arcanedev/composer)
 
 [badge_license]:   https://img.shields.io/packagist/l/arcanedev/composer.svg?style=flat-square
-[badge_laravel]:   https://img.shields.io/badge/For%20Laravel-5.0%7C5.1-orange.svg?style=flat-square
+[badge_php]:       https://img.shields.io/badge/PHP-Framework%20agnostic-4F5B93.svg?style=flat-square
 
 [badge_build]:     https://img.shields.io/travis/ARCANEDEV/Composer.svg?style=flat-square
 [badge_hhvm]:      https://img.shields.io/hhvm/arcanedev/composer.svg?style=flat-square
