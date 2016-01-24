@@ -2,19 +2,16 @@
 
 use Arcanedev\Composer\ComposerPlugin;
 use Arcanedev\Composer\Entities\PluginState;
-use Composer\Composer;
 use Composer\DependencyResolver\Operation\InstallOperation;
 use Composer\Installer\InstallerEvent;
 use Composer\Installer\InstallerEvents;
 use Composer\Installer\PackageEvents;
-use Composer\IO\IOInterface;
 use Composer\Package\BasePackage;
 use Composer\Package\Package;
 use Composer\Package\RootPackage;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
 use Prophecy\Argument;
-use Prophecy\Prophecy\ObjectProphecy;
 use ReflectionProperty;
 
 /**
@@ -29,19 +26,13 @@ class ComposerPluginTest extends TestCase
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /**
-     * @var Composer
-     */
+    /** @var \Composer\Composer */
     protected $composer;
 
-    /**
-     * @var IOInterface
-     */
+    /** @var \Composer\IO\IOInterface */
     protected $io;
 
-    /**
-     * @var ComposerPlugin
-     */
+    /** @var \Arcanedev\Composer\ComposerPlugin */
     protected $plugin;
 
     /* ------------------------------------------------------------------------------------------------
@@ -64,9 +55,9 @@ class ComposerPluginTest extends TestCase
 
     public function tearDown()
     {
-        parent::tearDown();
-
         unset($this->plugin);
+
+        parent::tearDown();
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -117,13 +108,12 @@ class ComposerPluginTest extends TestCase
         $dir  = $this->fixtureDir('require');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->setRequires(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $requires = $args[0];
-                $that->assertEquals(1, count($requires));
-                $that->assertArrayHasKey('monolog/monolog', $requires);
-            }
-        );
+        $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
+            $requires = $args[0];
+
+            $that->assertEquals(1, count($requires));
+            $that->assertArrayHasKey('monolog/monolog', $requires);
+        });
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
@@ -137,42 +127,40 @@ class ComposerPluginTest extends TestCase
         $dir  = $this->fixtureDir('one-merge-no-conflicts');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->setRequires(Argument::type('array'))
-            ->will(function ($args) use ($that) {
-                $requires = $args[0];
-                $that->assertEquals(1, count($requires));
-                $that->assertArrayHasKey('monolog/monolog', $requires);
-            });
+        $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
+            $requires = $args[0];
 
-        $root->setConflicts(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $suggest = $args[0];
-                $that->assertEquals(1, count($suggest));
-                $that->assertArrayHasKey('conflict/conflict', $suggest);
-            }
-        );
+            $that->assertEquals(1, count($requires));
+            $that->assertArrayHasKey('monolog/monolog', $requires);
+        });
 
-        $root->setReplaces(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $suggest = $args[0];
-                $that->assertEquals(1, count($suggest));
-                $that->assertArrayHasKey('replace/replace', $suggest);
-            }
-        );
-        $root->setProvides(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $suggest = $args[0];
-                $that->assertEquals(1, count($suggest));
-                $that->assertArrayHasKey('provide/provide', $suggest);
-            }
-        );
+        $root->setConflicts(Argument::type('array'))->will(function ($args) use ($that) {
+            $suggest = $args[0];
 
-        $root->setSuggests(Argument::type('array'))
-            ->will(function ($args) use ($that) {
-                $suggest = $args[0];
-                $that->assertEquals(1, count($suggest));
-                $that->assertArrayHasKey('ext-apc', $suggest);
-            });
+            $that->assertEquals(1, count($suggest));
+            $that->assertArrayHasKey('conflict/conflict', $suggest);
+        });
+
+        $root->setReplaces(Argument::type('array'))->will(function ($args) use ($that) {
+            $suggest = $args[0];
+
+            $that->assertEquals(1, count($suggest));
+            $that->assertArrayHasKey('replace/replace', $suggest);
+        });
+
+        $root->setProvides(Argument::type('array'))->will(function ($args) use ($that) {
+            $suggest = $args[0];
+
+            $that->assertEquals(1, count($suggest));
+            $that->assertArrayHasKey('provide/provide', $suggest);
+        });
+
+        $root->setSuggests(Argument::type('array'))->will(function ($args) use ($that) {
+            $suggest = $args[0];
+
+            $that->assertEquals(1, count($suggest));
+            $that->assertArrayHasKey('ext-apc', $suggest);
+        });
 
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
@@ -202,17 +190,12 @@ class ComposerPluginTest extends TestCase
         $dir  = $this->fixtureDir('merge-with-replace');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->setRequires(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $requires = $args[0];
-                $that->assertEquals(2, count($requires));
-                $that->assertArrayHasKey('monolog/monolog', $requires);
-                $that->assertEquals(
-                    '1.10.0',
-                    $requires['monolog/monolog']->getPrettyConstraint()
-                );
-            }
-        );
+        $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
+            $requires = $args[0];
+            $that->assertEquals(2, count($requires));
+            $that->assertArrayHasKey('monolog/monolog', $requires);
+            $that->assertEquals('1.10.0', $requires['monolog/monolog']->getPrettyConstraint());
+        });
 
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
@@ -233,10 +216,9 @@ class ComposerPluginTest extends TestCase
         $root     = $this->rootFromJson("{$dir}/composer.json");
         $packages = [];
 
-        $root->setRequires(Argument::type('array'))
-            ->will(function ($args) use (&$packages) {
-                $packages = array_merge($packages, $args[0]);
-            });
+        $root->setRequires(Argument::type('array'))->will(function ($args) use (&$packages) {
+            $packages = array_merge($packages, $args[0]);
+        });
 
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
@@ -259,11 +241,10 @@ class ComposerPluginTest extends TestCase
         $root       = $this->rootFromJson("{$dir}/composer.json");
         $packages   = [];
 
-        $root->setRequires(Argument::type('array'))->will(
-            function ($args) use (&$packages) {
-                $packages = array_merge($packages, $args[0]);
-            }
-        );
+        $root->setRequires(Argument::type('array'))->will(function ($args) use (&$packages) {
+            $packages = array_merge($packages, $args[0]);
+        });
+
         $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->getConflicts()->shouldNotBeCalled();
@@ -285,26 +266,20 @@ class ComposerPluginTest extends TestCase
         $dir    = $this->fixtureDir('one-merge-with-conflicts');
         $root   = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->setRequires(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $requires = $args[0];
-                $that->assertEquals(2, count($requires));
-                $that->assertArrayHasKey(
-                    'arcanedev/composer',
-                    $requires
-                );
-                $that->assertArrayHasKey('monolog/monolog', $requires);
-            }
-        );
+        $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
+            $requires = $args[0];
 
-        $root->setDevRequires(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $requires = $args[0];
-                $that->assertEquals(2, count($requires));
-                $that->assertArrayHasKey('foo', $requires);
-                $that->assertArrayHasKey('xyzzy', $requires);
-            }
-        )->shouldBeCalled();
+            $that->assertEquals(2, count($requires));
+            $that->assertArrayHasKey('arcanedev/composer', $requires);
+            $that->assertArrayHasKey('monolog/monolog',    $requires);
+        });
+
+        $root->setDevRequires(Argument::type('array'))->will(function ($args) use ($that) {
+            $requires = $args[0];
+            $that->assertEquals(2, count($requires));
+            $that->assertArrayHasKey('foo', $requires);
+            $that->assertArrayHasKey('xyzzy', $requires);
+        })->shouldBeCalled();
 
         $root->getDevRequires()->shouldBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
@@ -336,6 +311,7 @@ class ComposerPluginTest extends TestCase
                     'https://github.com/bd808/composer-merge-plugin.git',
                     $args[1]['url']
                 );
+
                 return new \Composer\Repository\VcsRepository(
                     $args[1],
                     $io->reveal(),
@@ -343,36 +319,27 @@ class ComposerPluginTest extends TestCase
                 );
             });
 
-        $repoManager->addRepository(Argument::any())
-            ->will(function ($args) use ($that) {
-                $that->assertInstanceOf(
-                    'Composer\Repository\VcsRepository',
-                    $args[0]
-                );
-            });
+        $repoManager->addRepository(Argument::any())->will(function ($args) use ($that) {
+            $that->assertInstanceOf('Composer\Repository\VcsRepository', $args[0]);
+        });
 
-        $this->composer->getRepositoryManager()
-            ->will(function () use ($repoManager) {
-                return $repoManager->reveal();
-            });
+        $this->composer->getRepositoryManager()->will(function () use ($repoManager) {
+            return $repoManager->reveal();
+        });
 
         $root = $this->rootFromJson("{$dir}/composer.json");
-        $root->setRequires(Argument::type('array'))
-            ->will(function ($args) use ($that) {
-                $requires = $args[0];
-                $that->assertEquals(1, count($requires));
-                $that->assertArrayHasKey(
-                    'arcanedev/composer',
-                    $requires
-                );
-            });
+        $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
+            $requires = $args[0];
 
-        $root->setRepositories(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $repos = $args[0];
-                $that->assertEquals(1, count($repos));
-            }
-        );
+            $that->assertEquals(1, count($requires));
+            $that->assertArrayHasKey('arcanedev/composer', $requires);
+        });
+
+        $root->setRepositories(Argument::type('array'))->will(function ($args) use ($that) {
+            $repos = $args[0];
+
+            $that->assertEquals(1, count($repos));
+        });
 
         $root->getDevRequires()->shouldNotBeCalled();
         $root->setDevRequires()->shouldNotBeCalled();
@@ -392,33 +359,30 @@ class ComposerPluginTest extends TestCase
         $dir = $this->fixtureDir('update-stability-flags');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->setRequires(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $requires = $args[0];
-                $that->assertEquals(7, count($requires));
-                $that->assertArrayHasKey('test/foo', $requires);
-                $that->assertArrayHasKey('test/bar', $requires);
-                $that->assertArrayHasKey('test/baz', $requires);
-                $that->assertArrayHasKey('test/xyzzy', $requires);
-                $that->assertArrayHasKey('test/plugh', $requires);
-                $that->assertArrayHasKey('test/plover', $requires);
-                $that->assertArrayHasKey('test/bedquilt', $requires);
-            }
-        );
+        $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
+            $requires = $args[0];
 
-        $root->setStabilityFlags(Argument::type('array'))->will(
-            function ($args) use ($that, &$expects) {
-                $expected = [
-                    'test/foo'   => BasePackage::STABILITY_DEV,
-                    'test/bar'   => BasePackage::STABILITY_BETA,
-                    'test/baz'   => BasePackage::STABILITY_ALPHA,
-                    'test/xyzzy' => BasePackage::STABILITY_RC,
-                    'test/plugh' => BasePackage::STABILITY_STABLE,
-                ];
+            $that->assertEquals(7, count($requires));
+            $that->assertArrayHasKey('test/foo', $requires);
+            $that->assertArrayHasKey('test/bar', $requires);
+            $that->assertArrayHasKey('test/baz', $requires);
+            $that->assertArrayHasKey('test/xyzzy', $requires);
+            $that->assertArrayHasKey('test/plugh', $requires);
+            $that->assertArrayHasKey('test/plover', $requires);
+            $that->assertArrayHasKey('test/bedquilt', $requires);
+        });
 
-                $that->assertEquals($expected, $args[0]);
-             }
-        );
+        $root->setStabilityFlags(Argument::type('array'))->will(function ($args) use ($that, &$expects) {
+            $expected = [
+                'test/foo'   => BasePackage::STABILITY_DEV,
+                'test/bar'   => BasePackage::STABILITY_BETA,
+                'test/baz'   => BasePackage::STABILITY_ALPHA,
+                'test/xyzzy' => BasePackage::STABILITY_RC,
+                'test/plugh' => BasePackage::STABILITY_STABLE,
+            ];
+
+            $that->assertEquals($expected, $args[0]);
+        });
 
         $root->getDevRequires()->shouldNotBeCalled();
         $root->setDevRequires(Argument::any())->shouldNotBeCalled();
@@ -453,28 +417,25 @@ class ComposerPluginTest extends TestCase
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         // The root package declares a stable package
-        $root->getStabilityFlags()->willReturn(array(
+        $root->getStabilityFlags()->willReturn([
             'arcanedev/composer' => BasePackage::STABILITY_STABLE,
-        ))->shouldBeCalled();
+        ])->shouldBeCalled();
 
-        $root->setRequires(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $requires = $args[0];
-                $that->assertCount(2, $requires);
-                $that->assertArrayHasKey('arcanedev/composer', $requires);
-                $that->assertArrayHasKey('arcanedev/arcanesoft', $requires);
-            }
-        );
+        $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
+            $requires = $args[0];
 
-        $root->setStabilityFlags(Argument::type('array'))->will(
-            function ($args) use ($that, &$expects) {
-                $expected = [
-                    'arcanedev/composer' => BasePackage::STABILITY_DEV,
-                ];
+            $that->assertCount(2, $requires);
+            $that->assertArrayHasKey('arcanedev/composer', $requires);
+            $that->assertArrayHasKey('arcanedev/arcanesoft', $requires);
+        });
 
-                $that->assertEquals($expected, $args[0]);
-            }
-        );
+        $root->setStabilityFlags(Argument::type('array'))->will(function ($args) use ($that, &$expects) {
+            $expected = [
+                'arcanedev/composer' => BasePackage::STABILITY_DEV,
+            ];
+
+            $that->assertEquals($expected, $args[0]);
+        });
 
         $this->triggerPlugin($root->reveal(), $dir);
     }
@@ -492,29 +453,26 @@ class ComposerPluginTest extends TestCase
         $root->getDevAutoload()->shouldBeCalled();
         $root->getRequires()->shouldNotBeCalled();
 
-        $root->setAutoload(Argument::type('array'))->will(
-            function ($args, $root) use (&$autoload) {
-                // Can't easily assert directly since there will be multiple
-                // calls to this setter to create our final expected state
-                $autoload = $args[0];
-                // Return the new data for the next call to getAutoLoad()
-                $root->getAutoload()->willReturn($args[0]);
-            }
-        )->shouldBeCalledTimes(2);
+        $root->setAutoload(Argument::type('array'))->will(function ($args, $root) use (&$autoload) {
+            // Can't easily assert directly since there will be multiple
+            // calls to this setter to create our final expected state
+            $autoload = $args[0];
 
-        $root->setDevAutoload(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $that->assertEquals(
-                    [
-                        'psr-4'     => [
-                            'Arcanedev\\Tests\\'         => 'tests/',
-                            'Arcanedev\\Module\\Tests\\' => 'modules/Package/module/tests/',
-                        ],
+            // Return the new data for the next call to getAutoLoad()
+            $root->getAutoload()->willReturn($args[0]);
+        })->shouldBeCalledTimes(2);
+
+        $root->setDevAutoload(Argument::type('array'))->will(function ($args) use ($that) {
+            $that->assertEquals(
+                [
+                    'psr-4'     => [
+                        'Arcanedev\\Tests\\'         => 'tests/',
+                        'Arcanedev\\Module\\Tests\\' => 'modules/Package/module/tests/',
                     ],
-                    $args[0]
-                );
-            }
-        );
+                ],
+                $args[0]
+            );
+        });
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
@@ -557,15 +515,13 @@ class ComposerPluginTest extends TestCase
         $dir  = $this->fixtureDir('merge-extra');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->setExtra(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $extra = $args[0];
-                $that->assertEquals(2, count($extra));
-                $that->assertArrayHasKey('merge-plugin', $extra);
-                $that->assertEquals(2, count($extra['merge-plugin']));
-                $that->assertArrayHasKey('foo', $extra);
-            }
-        )->shouldBeCalled();
+        $root->setExtra(Argument::type('array'))->will(function ($args) use ($that) {
+            $extra = $args[0];
+            $that->assertEquals(2, count($extra));
+            $that->assertArrayHasKey('merge-plugin', $extra);
+            $that->assertEquals(2, count($extra['merge-plugin']));
+            $that->assertArrayHasKey('foo', $extra);
+        })->shouldBeCalled();
 
         $root->getRequires()->shouldNotBeCalled();
         $root->getDevRequires()->shouldNotBeCalled();
@@ -594,15 +550,13 @@ class ComposerPluginTest extends TestCase
         $dir  = $this->fixtureDir('merge-extra-with-conflict');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->setExtra(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $extra = $args[0];
-                $that->assertEquals(2, count($extra));
-                $that->assertArrayHasKey('merge-plugin', $extra);
-                $that->assertArrayHasKey('foo', $extra);
-                $that->assertEquals('bar', $extra['foo']);
-            }
-        )->shouldBeCalled();
+        $root->setExtra(Argument::type('array'))->will(function ($args) use ($that) {
+            $extra = $args[0];
+            $that->assertEquals(2, count($extra));
+            $that->assertArrayHasKey('merge-plugin', $extra);
+            $that->assertArrayHasKey('foo', $extra);
+            $that->assertEquals('bar', $extra['foo']);
+        })->shouldBeCalled();
 
         $root->getRequires()->shouldNotBeCalled();
         $root->getDevRequires()->shouldNotBeCalled();
@@ -632,15 +586,14 @@ class ComposerPluginTest extends TestCase
         $dir  = $this->fixtureDir('merge-extra-conflict-replace');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->setExtra(Argument::type('array'))->will(
-            function ($args) use ($that) {
-                $extra = $args[0];
-                $that->assertEquals(2, count($extra));
-                $that->assertArrayHasKey('merge-plugin', $extra);
-                $that->assertArrayHasKey('foo', $extra);
-                $that->assertEquals('baz', $extra['foo']);
-            }
-        )->shouldBeCalled();
+        $root->setExtra(Argument::type('array'))->will(function ($args) use ($that) {
+            $extra = $args[0];
+
+            $that->assertEquals(2, count($extra));
+            $that->assertArrayHasKey('merge-plugin', $extra);
+            $that->assertArrayHasKey('foo', $extra);
+            $that->assertEquals('baz', $extra['foo']);
+        })->shouldBeCalled();
 
         $root->getRequires()->shouldNotBeCalled();
         $root->getDevRequires()->shouldNotBeCalled();
@@ -669,23 +622,14 @@ class ComposerPluginTest extends TestCase
             new Package($package, '1.2.3.4', '1.2.3')
         );
         $event = $this->prophesize('Composer\\Installer\\PackageEvent');
-        $event->getOperation()
-            ->willReturn($operation)
-            ->shouldBeCalled();
+        $event->getOperation()->willReturn($operation)->shouldBeCalled();
 
         if ($first) {
             $locker = $this->prophesize('Composer\\Package\\Locker');
-            $locker->isLocked()
-                ->willReturn($locked)
-                ->shouldBeCalled();
 
-            $this->composer->getLocker()
-                ->willReturn($locker->reveal())
-                ->shouldBeCalled();
-
-            $event->getComposer()
-                ->willReturn($this->composer->reveal())
-                ->shouldBeCalled();
+            $locker->isLocked()->willReturn($locked)->shouldBeCalled();
+            $this->composer->getLocker()->willReturn($locker->reveal())->shouldBeCalled();
+            $event->getComposer()->willReturn($this->composer->reveal())->shouldBeCalled();
         }
 
         $this->plugin->onPostPackageInstall($event->reveal());
@@ -709,6 +653,7 @@ class ComposerPluginTest extends TestCase
         $root->setRequires(Argument::type('array'))
             ->will(function ($args) use ($that) {
                 $requires = $args[0];
+
                 $that->assertEquals(2, count($requires));
                 $that->assertArrayHasKey('arcanedev/composer', $requires);
                 $that->assertArrayHasKey('arcanedev/foo', $requires);
@@ -736,26 +681,21 @@ class ComposerPluginTest extends TestCase
         $dir  = $this->fixtureDir('has-branch-alias');
 
         /** @var mixed $repoManager */
-        $repoManager = $this->prophesize(
-            'Composer\Repository\RepositoryManager'
-        );
+        $repoManager = $this->prophesize('Composer\Repository\RepositoryManager');
 
-        $repoManager->createRepository(
-            Argument::type('string'),
-            Argument::type('array')
-        )->will(function ($args) use ($that, $io) {
-            return new \Composer\Repository\VcsRepository(
-                $args[1], $io->reveal(), new \Composer\Config
-            );
-        });
+        $repoManager
+            ->createRepository(Argument::type('string'), Argument::type('array'))
+            ->will(function ($args) use ($that, $io) {
+                return new \Composer\Repository\VcsRepository(
+                    $args[1], $io->reveal(), new \Composer\Config
+                );
+            });
 
         $repoManager->addRepository(Argument::any())->shouldBeCalled();
 
-        $this->composer->getRepositoryManager()->will(
-            function () use ($repoManager) {
-                return $repoManager->reveal();
-            }
-        );
+        $this->composer->getRepositoryManager()->will(function () use ($repoManager) {
+            return $repoManager->reveal();
+        });
 
         $root = $this->rootFromJson("{$dir}/composer.json");
 
@@ -836,6 +776,7 @@ class ComposerPluginTest extends TestCase
         $root->setReplaces(Argument::type('array'))
              ->will(function ($args) use ($that) {
                  $replace = $args[0];
+
                  $that->assertEquals(3, count($replace));
 
                  $that->assertArrayHasKey('foo/bar', $replace);
@@ -874,10 +815,7 @@ class ComposerPluginTest extends TestCase
      */
     protected function getState()
     {
-        $state = new ReflectionProperty(
-            get_class($this->plugin),
-            'state'
-        );
+        $state = new ReflectionProperty(get_class($this->plugin), 'state');
         $state->setAccessible(true);
 
         return $state->getValue($this->plugin);
