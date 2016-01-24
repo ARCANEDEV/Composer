@@ -16,9 +16,7 @@ class LoggerTest extends TestCase
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /**
-     * @var \Composer\IO\IOInterface
-     */
+    /** @var \Composer\IO\IOInterface */
     private $io;
 
     /* ------------------------------------------------------------------------------------------------
@@ -36,9 +34,9 @@ class LoggerTest extends TestCase
 
     public function tearDown()
     {
-        parent::tearDown();
-
         unset($this->io);
+
+        parent::tearDown();
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -50,11 +48,9 @@ class LoggerTest extends TestCase
     {
         $output = [];
         $this->io->isVeryVerbose()->willReturn(true)->shouldBeCalled();
-        $this->io->writeError(Argument::type('string'))
-            ->will(function ($args) use (&$output) {
-                $output[] = $args[0];
-            })
-            ->shouldBeCalled();
+        $this->io->writeError(Argument::type('string'))->will(function ($args) use (&$output) {
+            $output[] = $args[0];
+        })->shouldBeCalled();
 
         $logger = new Logger('test', $this->io->reveal());
         $logger->debug('foo');
@@ -79,11 +75,9 @@ class LoggerTest extends TestCase
         $io     = $this->prophesize('Composer\IO\IOInterface');
 
         $io->isVerbose()->willReturn(true)->shouldBeCalled();
-        $io->writeError(Argument::type('string'))->will(
-            function ($args) use (&$output) {
-                $output[] = $args[0];
-            }
-        )->shouldBeCalled();
+        $io->writeError(Argument::type('string'))->will(function ($args) use (&$output) {
+            $output[] = $args[0];
+        })->shouldBeCalled();
 
         $io->write(Argument::type('string'))->shouldNotBeCalled();
 
@@ -97,8 +91,7 @@ class LoggerTest extends TestCase
     /** @test */
     public function it_can_not_run_on_verbose_info()
     {
-        $output = [];
-        $io     = $this->prophesize('Composer\IO\IOInterface');
+        $io = $this->prophesize('Composer\IO\IOInterface');
 
         $io->isVerbose()->willReturn(false)->shouldBeCalled();
         $io->writeError(Argument::type('string'))->shouldNotBeCalled();
@@ -111,14 +104,12 @@ class LoggerTest extends TestCase
     /** @test */
     public function it_can_run_on_warning()
     {
-        $output = array();
-        $io = $this->prophesize('Composer\IO\IOInterface');
+        $output = [];
+        $io     = $this->prophesize('Composer\IO\IOInterface');
 
-        $io->writeError(Argument::type('string'))->will(
-            function ($args) use (&$output) {
-                $output[] = $args[0];
-            }
-        )->shouldBeCalled();
+        $io->writeError(Argument::type('string'))->will(function ($args) use (&$output) {
+            $output[] = $args[0];
+        })->shouldBeCalled();
 
         $io->write(Argument::type('string'))->shouldNotBeCalled();
 

@@ -15,7 +15,7 @@ class PluginStateTest extends TestCase
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /** @var PluginState */
+    /** @var \Arcanedev\Composer\Entities\PluginState */
     private $pState;
 
     /* ------------------------------------------------------------------------------------------------
@@ -33,9 +33,9 @@ class PluginStateTest extends TestCase
 
     public function tearDown()
     {
-        parent::tearDown();
-
         unset($this->pState);
+
+        parent::tearDown();
     }
 
     /* ------------------------------------------------------------------------------------------------
