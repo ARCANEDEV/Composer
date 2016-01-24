@@ -1,7 +1,6 @@
 <?php namespace Arcanedev\Composer\Entities;
 
 use Composer\Package\BasePackage;
-use Composer\Package\Link;
 use Composer\Package\Version\VersionParser;
 
 /**
@@ -111,7 +110,7 @@ class StabilityFlags
         $flags = [];
 
         foreach ($requires as $name => $link) {
-            /** @var Link $link */
+            /** @var \Composer\Package\Link $link */
             $version      = $link->getPrettyConstraint();
             $stability    = $this->extractStability($version);
             $name         = strtolower($name);

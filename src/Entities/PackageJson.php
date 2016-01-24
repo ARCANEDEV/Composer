@@ -49,9 +49,9 @@ class PackageJson
      *
      * @param  array  $json
      *
-     * @return CompletePackage
+     * @return \Composer\Package\CompletePackage
      *
-     * @throws InvalidPackageException
+     * @throws \Arcanedev\Composer\Exceptions\InvalidPackageException
      */
     public static function convert(array $json)
     {

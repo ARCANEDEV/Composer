@@ -4,10 +4,8 @@ use Arcanedev\Composer\Utilities\Logger;
 use Arcanedev\Composer\Utilities\Util;
 use Composer\Composer;
 use Composer\Package\BasePackage;
-use Composer\Package\CompletePackage;
 use Composer\Package\Link;
 use Composer\Package\RootAliasPackage;
-use Composer\Package\RootPackage;
 use Composer\Package\RootPackageInterface;
 use Composer\Package\Version\VersionParser;
 use Composer\Repository\RepositoryManager;
@@ -24,10 +22,10 @@ class Package
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /** @var Composer $composer */
+    /** @var \Composer\Composer $composer */
     protected $composer;
 
-    /** @var Logger $logger */
+    /** @var \Arcanedev\Composer\Utilities\Logger $logger */
     protected $logger;
 
     /** @var string $path */
@@ -36,7 +34,7 @@ class Package
     /** @var array $json */
     protected $json;
 
-    /** @var CompletePackage $package */
+    /** @var \Composer\Package\CompletePackage $package */
     protected $package;
 
     /* ------------------------------------------------------------------------------------------------
@@ -46,9 +44,9 @@ class Package
     /**
      * Make a Package instance.
      *
-     * @param  string    $path
-     * @param  Composer  $composer
-     * @param  Logger    $logger
+     * @param  string                                $path
+     * @param  \Composer\Composer                    $composer
+     * @param  \Arcanedev\Composer\Utilities\Logger  $logger
      */
     public function __construct($path, Composer $composer, Logger $logger)
     {
@@ -98,8 +96,8 @@ class Package
     /**
      * Merge this package into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
-     * @param  PluginState           $state
+     * @param  \Composer\Package\RootPackageInterface    $root
+     * @param  \Arcanedev\Composer\Entities\PluginState  $state
      */
     public function mergeInto(RootPackageInterface $root, PluginState $state)
     {
@@ -125,7 +123,7 @@ class Package
      * Add a collection of repositories described by the given configuration
      * to the given package and the global repository manager.
      *
-     * @param  RootPackageInterface  $root
+     * @param  \Composer\Package\RootPackageInterface  $root
      */
     private function addRepositories(RootPackageInterface $root)
     {
@@ -145,9 +143,9 @@ class Package
     /**
      * Add a repository to collection of repositories.
      *
-     * @param  RepositoryManager  $repoManager
-     * @param  array              $repositories
-     * @param  array              $repoJson
+     * @param  \Composer\Repository\RepositoryManager  $repoManager
+     * @param  array                                   $repositories
+     * @param  array                                   $repoJson
      */
     private function addRepository(
         RepositoryManager $repoManager,
@@ -169,8 +167,8 @@ class Package
     /**
      * Merge require into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
-     * @param  PluginState           $state
+     * @param  \Composer\Package\RootPackageInterface    $root
+     * @param  \Arcanedev\Composer\Entities\PluginState  $state
      */
     private function mergeRequires(RootPackageInterface $root, PluginState $state)
     {
@@ -198,8 +196,8 @@ class Package
     /**
      * Merge require-dev into RootPackage.
      *
-     * @param  RootPackageInterface  $root
-     * @param  PluginState           $state
+     * @param  \Composer\Package\RootPackageInterface    $root
+     * @param  \Arcanedev\Composer\Entities\PluginState  $state
      */
     private function mergeDevRequires(RootPackageInterface $root, PluginState $state)
     {
@@ -227,9 +225,9 @@ class Package
     /**
      * Update Links with a 'self.version' constraint with the root package's version.
      *
-     * @param  string                $type
-     * @param  array                 $links
-     * @param  RootPackageInterface  $root
+     * @param  string                                  $type
+     * @param  array                                   $links
+     * @param  \Composer\Package\RootPackageInterface  $root
      *
      * @return array
      */
@@ -286,7 +284,7 @@ class Package
     /**
      * Merge autoload into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
+     * @param  \Composer\Package\RootPackageInterface  $root
      */
     private function mergeAutoload(RootPackageInterface $root)
     {
@@ -303,7 +301,7 @@ class Package
     /**
      * Merge autoload-dev into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
+     * @param  \Composer\Package\RootPackageInterface  $root
      */
     private function mergeDevAutoload(RootPackageInterface $root)
     {
@@ -321,8 +319,8 @@ class Package
      * Extract and merge stability flags from the given collection of
      * requires and merge them into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
-     * @param  array                 $requires
+     * @param  \Composer\Package\RootPackageInterface  $root
+     * @param  array                                   $requires
      */
     private function mergeStabilityFlags(RootPackageInterface $root, array $requires)
     {
@@ -339,7 +337,7 @@ class Package
     /**
      * Merge conflicting packages into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
+     * @param  \Composer\Package\RootPackageInterface  $root
      */
     protected function mergeConflicts(RootPackageInterface $root)
     {
@@ -365,7 +363,7 @@ class Package
     /**
      * Merge replaced packages into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
+     * @param  \Composer\Package\RootPackageInterface  $root
      */
     protected function mergeReplaces(RootPackageInterface $root)
     {
@@ -391,7 +389,7 @@ class Package
     /**
      * Merge provided virtual packages into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
+     * @param  \Composer\Package\RootPackageInterface  $root
      */
     protected function mergeProvides(RootPackageInterface $root)
     {
@@ -417,7 +415,7 @@ class Package
     /**
      * Merge suggested packages into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
+     * @param  \Composer\Package\RootPackageInterface  $root
      */
     private function mergeSuggests(RootPackageInterface $root)
     {
@@ -432,8 +430,8 @@ class Package
     /**
      * Merge extra config into a RootPackage.
      *
-     * @param  RootPackageInterface  $root
-     * @param  PluginState           $state
+     * @param  \Composer\Package\RootPackageInterface    $root
+     * @param  \Arcanedev\Composer\Entities\PluginState  $state
      */
     private function mergeExtra(RootPackageInterface $root, PluginState $state)
     {
@@ -454,9 +452,9 @@ class Package
     /**
      * Get extra config.
      *
-     * @param  RootPackageInterface  $root
-     * @param  PluginState           $state
-     * @param  array                 $extra
+     * @param  \Composer\Package\RootPackageInterface    $root
+     * @param  \Arcanedev\Composer\Entities\PluginState  $state
+     * @param  array                                     $extra
      *
      * @return array
      */
@@ -482,10 +480,10 @@ class Package
     /**
      * Get a full featured Package from a RootPackageInterface.
      *
-     * @param  RootPackageInterface|RootPackage  $root
-     * @param  string                            $method
+     * @param  \Composer\Package\RootPackageInterface|\Composer\Package\RootPackage  $root
+     * @param  string                                                                $method
      *
-     * @return RootPackageInterface|RootPackage
+     * @return \Composer\Package\RootPackageInterface|\Composer\Package\RootPackage
      */
     private static function unwrapIfNeeded(
         RootPackageInterface $root, $method = 'setExtra'

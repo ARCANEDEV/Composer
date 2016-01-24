@@ -24,7 +24,7 @@ class Logger
     /**
      * The log IO instance.
      *
-     * @var IOInterface $io
+     * @var \Composer\IO\IOInterface $io
      */
     protected $io;
 
@@ -35,8 +35,8 @@ class Logger
     /**
      * Make Logger instance.
      *
-     * @param  string       $name
-     * @param  IOInterface  $io
+     * @param  string                    $name
+     * @param  \Composer\IO\IOInterface  $io
      */
     public function __construct($name, IOInterface $io)
     {

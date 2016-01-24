@@ -14,7 +14,7 @@ class PluginState
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /** @var Composer */
+    /** @var \Composer\Composer */
     protected $composer;
 
     /** @var array */
@@ -74,7 +74,7 @@ class PluginState
     /**
      * Make PluginState instance.
      *
-     * @param  Composer  $composer
+     * @param  \Composer\Composer  $composer
      */
     public function __construct(Composer $composer)
     {

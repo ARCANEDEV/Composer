@@ -15,7 +15,6 @@ use Composer\Installer\InstallerEvents;
 use Composer\Installer\PackageEvent;
 use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
-use Composer\Package\Link;
 use Composer\Package\RootPackageInterface;
 use Composer\Plugin\PluginInterface;
 use Composer\Script\Event;
@@ -47,13 +46,13 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /** @var Composer $composer */
+    /** @var \Composer\Composer $composer */
     protected $composer;
 
-    /** @var PluginState $state */
+    /** @var \Arcanedev\Composer\Entities\PluginState $state */
     protected $state;
 
-    /** @var Logger $logger */
+    /** @var \Arcanedev\Composer\Utilities\Logger $logger */
     protected $logger;
 
     /**
@@ -70,8 +69,8 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Apply plugin modifications to composer
      *
-     * @param  Composer     $composer
-     * @param  IOInterface  $io
+     * @param  \Composer\Composer        $composer
+     * @param  \Composer\IO\IOInterface  $io
      */
     public function activate(Composer $composer, IOInterface $io)
     {
@@ -104,7 +103,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * initial merge processing to the request that will be processed by the
      * dependency solver.
      *
-     * @param  InstallerEvent  $event
+     * @param  \Composer\Installer\InstallerEvent  $event
      */
     public function onDependencySolve(InstallerEvent $event)
     {
@@ -127,9 +126,9 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Install requirements.
      *
-     * @param  Request  $request
-     * @param  Link[]   $links
-     * @param  bool     $dev
+     * @param  \Composer\DependencyResolver\Request  $request
+     * @param  \Composer\Package\Link[]              $links
+     * @param  bool                                  $dev
      */
     private function installRequires(Request $request, array $links, $dev = false)
     {
@@ -146,7 +145,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * Handle an event callback for an install or update or dump-autoload command by checking
      * for "merge-patterns" in the "extra" data and merging package contents if found.
      *
-     * @param  Event  $event
+     * @param  \Composer\Script\Event  $event
      */
     public function onInstallUpdateOrDump(Event $event)
     {
@@ -199,8 +198,8 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Read a JSON file and merge its contents
      *
-     * @param  RootPackageInterface  $root
-     * @param  string                $path
+     * @param  \Composer\Package\RootPackageInterface  $root
+     * @param  string                                  $path
      */
     private function mergeFile(RootPackageInterface $root, $path)
     {
@@ -225,7 +224,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * Handle an event callback following installation of a new package by
      * checking to see if the package that was installed was our plugin.
      *
-     * @param  PackageEvent  $event
+     * @param  \Composer\Installer\PackageEvent  $event
      */
     public function onPostPackageInstall(PackageEvent $event)
     {
@@ -249,7 +248,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      * plugin was installed during the run then trigger an update command to
      * process any merge-patterns in the current config.
      *
-     * @param  Event  $event
+     * @param  \Composer\Script\Event  $event
      *
      * @codeCoverageIgnore
      */
@@ -267,7 +266,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     /**
      * Run first install.
      *
-     * @param  Event  $event
+     * @param  \Composer\Script\Event  $event
      *
      * @throws \Exception
      *
