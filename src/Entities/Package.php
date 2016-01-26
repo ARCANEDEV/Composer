@@ -68,11 +68,9 @@ class Package
      */
     public function getRequires()
     {
-        if (isset($this->json['extra']['merge-plugin']['require'])) {
-            return $this->json['extra']['merge-plugin']['require'];
-        }
-
-        return [];
+        return isset($this->json['extra']['merge-plugin']['require'])
+            ? $this->json['extra']['merge-plugin']['require']
+            : [];
     }
 
     /**
@@ -347,12 +345,14 @@ class Package
 
         $unwrapped = self::unwrapIfNeeded($root, 'setConflicts');
 
+        // @codeCoverageIgnoreStart
         if ($root !== $unwrapped) {
             $this->logger->warning(
                 'This Composer version does not support ' .
                 "'conflicts' merging for aliased packages."
             );
         }
+        // @codeCoverageIgnoreEnd
 
         $unwrapped->setConflicts(array_merge(
             $root->getConflicts(),
@@ -373,12 +373,14 @@ class Package
 
         $unwrapped = self::unwrapIfNeeded($root, 'setReplaces');
 
+        // @codeCoverageIgnoreStart
         if ($root !== $unwrapped) {
             $this->logger->warning(
                 'This Composer version does not support ' .
                 "'replaces' merging for aliased packages."
             );
         }
+        // @codeCoverageIgnoreEnd
 
         $unwrapped->setReplaces(array_merge(
             $root->getReplaces(),
@@ -399,12 +401,14 @@ class Package
 
         $unwrapped = self::unwrapIfNeeded($root, 'setProvides');
 
+        // @codeCoverageIgnoreStart
         if ($root !== $unwrapped) {
             $this->logger->warning(
                 'This Composer version does not support ' .
                 "'provides' merging for aliased packages."
             );
         }
+        // @codeCoverageIgnoreEnd
 
         $unwrapped->setProvides(array_merge(
             $root->getProvides(),
@@ -488,14 +492,8 @@ class Package
     private static function unwrapIfNeeded(
         RootPackageInterface $root, $method = 'setExtra'
     ) {
-        if (
-            $root instanceof RootAliasPackage &&
-            ! method_exists($root, $method)
-        ) {
-            // Unwrap and return the aliased RootPackage.
-            $root = $root->getAliasOf();
-        }
-
-        return $root;
+        return ($root instanceof RootAliasPackage && ! method_exists($root, $method))
+            ? $root->getAliasOf()
+            : $root;
     }
 }

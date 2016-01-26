@@ -18,7 +18,7 @@
         "composer-plugin-api": "^1.0"
     },
     "require-dev": {
-        "composer/composer":   "1.0.0-alpha10",
+        "composer/composer":   "1.0.*@dev",
         "phpunit/phpcov":      "~2.0|~3.0",
         "phpunit/phpunit":     "~4.0|~5.0"
     },
