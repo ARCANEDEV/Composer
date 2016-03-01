@@ -109,11 +109,11 @@ class Package
             $this->mergeDevAutoload($root);
         }
 
-        $this->mergeConflicts($root);
-        $this->mergeReplaces($root);
-        $this->mergeProvides($root);
-        $this->mergeSuggests($root);
+        $this->mergePackageLinks('conflict', $root);
+        $this->mergePackageLinks('replace',  $root);
+        $this->mergePackageLinks('provide',  $root);
 
+        $this->mergeSuggests($root);
         $this->mergeExtra($root, $state);
     }
 
@@ -333,86 +333,35 @@ class Package
     }
 
     /**
-     * Merge conflicting packages into a RootPackage.
+     * Merge package links of the given type into a RootPackageInterface
      *
+     * @param  string                                  $type  'conflict', 'replace' or 'provide'
      * @param  \Composer\Package\RootPackageInterface  $root
      */
-    protected function mergeConflicts(RootPackageInterface $root)
+    protected function mergePackageLinks($type, RootPackageInterface $root)
     {
-        $conflicts = $this->package->getConflicts();
+        $linkType = BasePackage::$supportedLinkTypes[$type];
+        $getter   = 'get' . ucfirst($linkType['method']);
+        $setter   = 'set' . ucfirst($linkType['method']);
 
-        if (empty($conflicts)) return;
+        $links = $this->package->{$getter}();
 
-        $unwrapped = self::unwrapIfNeeded($root, 'setConflicts');
+        if (empty($links)) return;
+
+        $unwrapped = self::unwrapIfNeeded($root, $setter);
 
         // @codeCoverageIgnoreStart
         if ($root !== $unwrapped) {
             $this->logger->warning(
                 'This Composer version does not support ' .
-                "'conflicts' merging for aliased packages."
+                "'{$type}' merging for aliased packages."
             );
         }
         // @codeCoverageIgnoreEnd
 
-        $unwrapped->setConflicts(array_merge(
-            $root->getConflicts(),
-            $this->replaceSelfVersionDependencies('conflict', $conflicts, $root)
-        ));
-    }
-
-    /**
-     * Merge replaced packages into a RootPackage.
-     *
-     * @param  \Composer\Package\RootPackageInterface  $root
-     */
-    protected function mergeReplaces(RootPackageInterface $root)
-    {
-        $replaces = $this->package->getReplaces();
-
-        if (empty($replaces)) return;
-
-        $unwrapped = self::unwrapIfNeeded($root, 'setReplaces');
-
-        // @codeCoverageIgnoreStart
-        if ($root !== $unwrapped) {
-            $this->logger->warning(
-                'This Composer version does not support ' .
-                "'replaces' merging for aliased packages."
-            );
-        }
-        // @codeCoverageIgnoreEnd
-
-        $unwrapped->setReplaces(array_merge(
-            $root->getReplaces(),
-            $this->replaceSelfVersionDependencies('replace', $replaces, $root)
-        ));
-    }
-
-    /**
-     * Merge provided virtual packages into a RootPackage.
-     *
-     * @param  \Composer\Package\RootPackageInterface  $root
-     */
-    protected function mergeProvides(RootPackageInterface $root)
-    {
-        $provides  = $this->package->getProvides();
-
-        if (empty($provides)) return;
-
-        $unwrapped = self::unwrapIfNeeded($root, 'setProvides');
-
-        // @codeCoverageIgnoreStart
-        if ($root !== $unwrapped) {
-            $this->logger->warning(
-                'This Composer version does not support ' .
-                "'provides' merging for aliased packages."
-            );
-        }
-        // @codeCoverageIgnoreEnd
-
-        $unwrapped->setProvides(array_merge(
-            $root->getProvides(),
-            $this->replaceSelfVersionDependencies('provide', $provides, $root)
+        $unwrapped->{$setter}(array_merge(
+            $root->{$getter}(),
+            $this->replaceSelfVersionDependencies($type, $links, $root)
         ));
     }
 
