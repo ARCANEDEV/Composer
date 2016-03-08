@@ -80,11 +80,9 @@ class Package
      */
     public function getIncludes()
     {
-        if (isset($this->json['extra']['merge-plugin']['include'])) {
-            return $this->json['extra']['merge-plugin']['include'];
-        }
-
-        return [];
+        return isset($this->json['extra']['merge-plugin']['include'])
+            ? $this->json['extra']['merge-plugin']['include']
+            : [];
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -218,38 +216,6 @@ class Package
         ));
 
         $state->addDuplicateLinks('require-dev', $duplicateLinks);
-    }
-
-    /**
-     * Update Links with a 'self.version' constraint with the root package's version.
-     *
-     * @param  string                                  $type
-     * @param  array                                   $links
-     * @param  \Composer\Package\RootPackageInterface  $root
-     *
-     * @return array
-     */
-    protected function replaceSelfVersionDependencies(
-        $type, array $links, RootPackageInterface $root
-    ) {
-        $linkType      = BasePackage::$supportedLinkTypes[$type];
-        $version       = $root->getVersion();
-        $prettyVersion = $root->getPrettyVersion();
-        $vp            = new VersionParser;
-
-        return array_map(function (Link $link) use ($linkType, $version, $prettyVersion, $vp) {
-            if ('self.version' === $link->getPrettyConstraint()) {
-                return new Link(
-                    $link->getSource(),
-                    $link->getTarget(),
-                    $vp->parseConstraints($version),
-                    $linkType['description'],
-                    $prettyVersion
-                );
-            }
-
-            return $link;
-        }, $links);
     }
 
     /**
@@ -428,6 +394,46 @@ class Package
         }
 
         return array_merge($extra, $rootExtra);
+    }
+
+    /**
+     * Update Links with a 'self.version' constraint with the root package's version.
+     *
+     * @param  string                                  $type
+     * @param  array                                   $links
+     * @param  \Composer\Package\RootPackageInterface  $root
+     *
+     * @return array
+     */
+    protected function replaceSelfVersionDependencies(
+        $type, array $links, RootPackageInterface $root
+    ) {
+        $linkType      = BasePackage::$supportedLinkTypes[$type];
+        $version       = $root->getVersion();
+        $prettyVersion = $root->getPrettyVersion();
+        $vp            = new VersionParser;
+        $packages      = $root->{'get' . ucfirst($linkType['method'])}();
+
+        return array_map(function (Link $link) use ($linkType, $version, $prettyVersion, $vp, $packages) {
+            if ($link->getPrettyConstraint() !== 'self.version') {
+                return $link;
+            }
+
+            if (isset($packages[$link->getSource()])) {
+                /** @var  \Composer\Package\Link  $package */
+                $package       = $packages[$link->getSource()];
+                $version       = $package->getConstraint()->getPrettyString();
+                $prettyVersion = $package->getPrettyConstraint();
+            }
+
+            return new Link(
+                $link->getSource(),
+                $link->getTarget(),
+                $vp->parseConstraints($version),
+                $linkType['description'],
+                $prettyVersion
+            );
+        }, $links);
     }
 
     /**
