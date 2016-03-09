@@ -46,19 +46,19 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      |  Properties
      | ------------------------------------------------------------------------------------------------
      */
-    /** @var \Composer\Composer $composer */
+    /** @var \Composer\Composer */
     protected $composer;
 
-    /** @var \Arcanedev\Composer\Entities\PluginState $state */
+    /** @var \Arcanedev\Composer\Entities\PluginState */
     protected $state;
 
-    /** @var \Arcanedev\Composer\Utilities\Logger $logger */
+    /** @var \Arcanedev\Composer\Utilities\Logger */
     protected $logger;
 
     /**
      * Files that have already been processed
      *
-     * @var string[] $loadedFiles
+     * @var array
      */
     protected $loadedFiles = [];
 
@@ -110,15 +110,12 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         $request = $event->getRequest();
 
         $this->installRequires(
-            $request,
-            $this->state->getDuplicateLinks('require')
+            $request, $this->state->getDuplicateLinks('require')
         );
 
         if ($this->state->isDevMode()) {
             $this->installRequires(
-                $request,
-                $this->state->getDuplicateLinks('require-dev'),
-                true
+                $request, $this->state->getDuplicateLinks('require-dev'), true
             );
         }
     }
@@ -176,19 +173,15 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     protected function mergeFiles(array $patterns, $required = false)
     {
         $root  = $this->composer->getPackage();
-        $files = array_map(
-            function ($files, $pattern) use ($required) {
-                if ($required && ! $files) {
-                    throw new MissingFileException(
-                        "merge-plugin: No files matched required '{$pattern}'"
-                    );
-                }
+        $files = array_map(function ($files, $pattern) use ($required) {
+            if ($required && ! $files) {
+                throw new MissingFileException(
+                    "merge-plugin: No files matched required '{$pattern}'"
+                );
+            }
 
-                return $files;
-            },
-            array_map('glob', $patterns),
-            $patterns
-        );
+            return $files;
+        }, array_map('glob', $patterns), $patterns);
 
         foreach (array_reduce($files, 'array_merge', []) as $path) {
             $this->mergeFile($root, $path);
@@ -274,17 +267,14 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function runFirstInstall(Event $event)
     {
-        $config       = $this->composer->getConfig();
-        $preferSource = $config->get('preferred-install') == 'source';
-        $preferDist   = $config->get('preferred-install') == 'dist';
         $installer    = Installer::create(
             $event->getIO(),
             // Create a new Composer instance to ensure full processing of the merged files.
             Factory::create($event->getIO(), null, false)
         );
 
-        $installer->setPreferSource($preferSource);
-        $installer->setPreferDist($preferDist);
+        $installer->setPreferSource($this->isPreferredInstall('source'));
+        $installer->setPreferDist($this->isPreferredInstall('dist'));
         $installer->setDevMode($event->isDevMode());
         $installer->setDumpAutoloader($this->state->shouldDumpAutoloader());
         $installer->setOptimizeAutoloader($this->state->shouldOptimizeAutoloader());
@@ -296,5 +286,23 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         }
 
         $installer->run();
+    }
+
+    /* ------------------------------------------------------------------------------------------------
+     |  Check Functions
+     | ------------------------------------------------------------------------------------------------
+     */
+    /**
+     * Check the preferred install (source or dist).
+     *
+     * @param  string  $preferred
+     *
+     * @return bool
+     *
+     * @codeCoverageIgnore
+     */
+    private function isPreferredInstall($preferred)
+    {
+        return $this->composer->getConfig()->get('preferred-install') === $preferred;
     }
 }

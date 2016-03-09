@@ -221,12 +221,12 @@ class Package
     /**
      * Merge two collections of package links and collect duplicates for subsequent processing.
      *
-     * @param  array  $origin          Primary collection
-     * @param  array  $merge           Additional collection
-     * @param  bool   $replace         Replace existing links ?
-     * @param  array  $duplicateLinks  Duplicate storage
+     * @param  \Composer\Package\Link[]  $origin          Primary collection
+     * @param  array                     $merge           Additional collection
+     * @param  bool                      $replace         Replace existing links ?
+     * @param  array                     $duplicateLinks  Duplicate storage
      *
-     * @return array                   Merged collection
+     * @return \Composer\Package\Link[]                   Merged collection
      */
     private function mergeLinks(array $origin, array $merge, $replace, array &$duplicateLinks)
     {
@@ -284,7 +284,7 @@ class Package
      * requires and merge them into a RootPackage.
      *
      * @param  \Composer\Package\RootPackageInterface  $root
-     * @param  array                                   $requires
+     * @param  \Composer\Package\Link[]                $requires
      */
     private function mergeStabilityFlags(RootPackageInterface $root, array $requires)
     {
