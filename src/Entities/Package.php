@@ -37,6 +37,9 @@ class Package
     /** @var \Composer\Package\CompletePackage $package */
     protected $package;
 
+    /** @var \Composer\Package\Version\VersionParser $versionParser */
+    protected $versionParser;
+
     /* ------------------------------------------------------------------------------------------------
      |  Constructor
      | ------------------------------------------------------------------------------------------------
@@ -50,11 +53,12 @@ class Package
      */
     public function __construct($path, Composer $composer, Logger $logger)
     {
-        $this->path     = $path;
-        $this->composer = $composer;
-        $this->logger   = $logger;
-        $this->json     = PackageJson::read($path);
-        $this->package  = PackageJson::convert($this->json);
+        $this->path          = $path;
+        $this->composer      = $composer;
+        $this->logger        = $logger;
+        $this->json          = PackageJson::read($path);
+        $this->package       = PackageJson::convert($this->json);
+        $this->versionParser = new VersionParser;
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -113,6 +117,7 @@ class Package
 
         $this->mergeSuggests($root);
         $this->mergeExtra($root, $state);
+        $this->mergeReferences($root);
     }
 
     /**
@@ -397,6 +402,58 @@ class Package
     }
 
     /**
+     * Update the root packages reference information.
+     *
+     * @param  \Composer\Package\RootPackageInterface  $root
+     */
+    private function mergeReferences(RootPackageInterface $root)
+    {
+        // Merge source reference information for merged packages.
+        // @see \Composer\Package\Loader\RootPackageLoader::load
+        $references = [];
+        $unwrapped  = $this->unwrapIfNeeded($root, 'setReferences');
+
+        foreach (['require', 'require-dev'] as $linkType) {
+            $linkInfo = BasePackage::$supportedLinkTypes[$linkType];
+            $method   = 'get'.ucfirst($linkInfo['method']);
+            $links    = [];
+
+            /** @var  \Composer\Package\Link  $link */
+            foreach ($unwrapped->$method() as $link) {
+                $links[$link->getTarget()] = $link->getConstraint()->getPrettyString();
+            }
+
+            $references = $this->extractReferences($links, $references);
+        }
+
+        $unwrapped->setReferences($references);
+    }
+
+    /**
+     * Extract vcs revision from version constraint (dev-master#abc123).
+     * @see \Composer\Package\Loader\RootPackageLoader::extractReferences()
+     *
+     * @param  array  $requires
+     * @param  array  $references
+     *
+     * @return array
+     */
+    protected function extractReferences(array $requires, array $references)
+    {
+        foreach ($requires as $reqName => $reqVersion) {
+            $reqVersion = preg_replace('{^([^,\s@]+) as .+$}', '$1', $reqVersion);
+            if (
+                preg_match('{^[^,\s@]+?#([a-f0-9]+)$}', $reqVersion, $match) &&
+                VersionParser::parseStability($reqVersion) === 'dev'
+            ) {
+                $references[strtolower($reqName)] = $match[1];
+            }
+        }
+
+        return $references;
+    }
+
+    /**
      * Update Links with a 'self.version' constraint with the root package's version.
      *
      * @param  string                                  $type
@@ -411,7 +468,7 @@ class Package
         $linkType      = BasePackage::$supportedLinkTypes[$type];
         $version       = $root->getVersion();
         $prettyVersion = $root->getPrettyVersion();
-        $vp            = new VersionParser;
+        $vp            = $this->versionParser;
         $packages      = $root->{'get' . ucfirst($linkType['method'])}();
 
         return array_map(function (Link $link) use ($linkType, $version, $prettyVersion, $vp, $packages) {
