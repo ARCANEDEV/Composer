@@ -98,6 +98,8 @@ class ComposerPluginTest extends TestCase
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->getRequires()->shouldNotBeCalled();
+        $root->getDevRequires()->shouldNotBeCalled();
+        $root->setReferences(Argument::type('array'))->shouldNotBeCalled();
         $this->triggerPlugin($root->reveal(), $dir);
     }
 
@@ -162,7 +164,6 @@ class ComposerPluginTest extends TestCase
             $that->assertArrayHasKey('ext-apc', $suggest);
         });
 
-        $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->getProvides()->shouldBeCalled();
         $root->getReplaces()->shouldBeCalled();
@@ -197,7 +198,6 @@ class ComposerPluginTest extends TestCase
             $that->assertEquals('1.10.0', $requires['monolog/monolog']->getPrettyConstraint());
         });
 
-        $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->getConflicts()->shouldNotBeCalled();
         $root->getReplaces()->shouldNotBeCalled();
@@ -220,7 +220,6 @@ class ComposerPluginTest extends TestCase
             $packages = array_merge($packages, $args[0]);
         });
 
-        $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->getConflicts()->shouldNotBeCalled();
         $root->getReplaces()->shouldNotBeCalled();
@@ -245,7 +244,6 @@ class ComposerPluginTest extends TestCase
             $packages = array_merge($packages, $args[0]);
         });
 
-        $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->getConflicts()->shouldNotBeCalled();
         $root->getReplaces()->shouldNotBeCalled();
@@ -341,7 +339,6 @@ class ComposerPluginTest extends TestCase
             $that->assertEquals(1, count($repos));
         });
 
-        $root->getDevRequires()->shouldNotBeCalled();
         $root->setDevRequires()->shouldNotBeCalled();
         $root->getConflicts()->shouldNotBeCalled();
         $root->getReplaces()->shouldNotBeCalled();
@@ -384,7 +381,6 @@ class ComposerPluginTest extends TestCase
             $that->assertEquals($expected, $args[0]);
         });
 
-        $root->getDevRequires()->shouldNotBeCalled();
         $root->setDevRequires(Argument::any())->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->setRepositories(Argument::any())->shouldNotBeCalled();
@@ -451,7 +447,6 @@ class ComposerPluginTest extends TestCase
 
         $root->getAutoload()->shouldBeCalled();
         $root->getDevAutoload()->shouldBeCalled();
-        $root->getRequires()->shouldNotBeCalled();
 
         $root->setAutoload(Argument::type('array'))->will(function ($args, $root) use (&$autoload) {
             // Can't easily assert directly since there will be multiple
@@ -523,8 +518,6 @@ class ComposerPluginTest extends TestCase
             $that->assertArrayHasKey('foo', $extra);
         })->shouldBeCalled();
 
-        $root->getRequires()->shouldNotBeCalled();
-        $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->getConflicts()->shouldNotBeCalled();
         $root->getReplaces()->shouldNotBeCalled();
@@ -558,8 +551,6 @@ class ComposerPluginTest extends TestCase
             $that->assertEquals('bar', $extra['foo']);
         })->shouldBeCalled();
 
-        $root->getRequires()->shouldNotBeCalled();
-        $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->getConflicts()->shouldNotBeCalled();
         $root->getReplaces()->shouldNotBeCalled();
@@ -595,8 +586,6 @@ class ComposerPluginTest extends TestCase
             $that->assertEquals('baz', $extra['foo']);
         })->shouldBeCalled();
 
-        $root->getRequires()->shouldNotBeCalled();
-        $root->getDevRequires()->shouldNotBeCalled();
         $root->getRepositories()->shouldNotBeCalled();
         $root->getConflicts()->shouldNotBeCalled();
         $root->getReplaces()->shouldNotBeCalled();
@@ -821,8 +810,6 @@ class ComposerPluginTest extends TestCase
                  );
              });
 
-        $root->getRequires()->shouldNotBeCalled();
-
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
         $this->assertEquals(0, count($extraInstalls));
     }
@@ -834,28 +821,54 @@ class ComposerPluginTest extends TestCase
         $dir  = $this->fixtureDir('it-can-resolve-self-version-constraint-through-packages-from-the-root-package');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
-        $root->setReplaces(Argument::type('array'))
-             ->will(function ($args) use ($that) {
-                 $replace = $args[0];
-                 $that->assertEquals(3, count($replace));
+        $root->setReplaces(Argument::type('array'))->will(function ($args) use ($that) {
+             $replace = $args[0];
+             $that->assertEquals(3, count($replace));
 
-                 $that->assertArrayHasKey('foo/bar',   $replace);
-                 $that->assertArrayHasKey('foo/baz',   $replace);
-                 $that->assertArrayHasKey('foo/xyzzy', $replace);
+             $that->assertArrayHasKey('foo/bar',   $replace);
+             $that->assertArrayHasKey('foo/baz',   $replace);
+             $that->assertArrayHasKey('foo/xyzzy', $replace);
 
-                 $that->assertInstanceOf('Composer\Package\Link', $replace['foo/bar']);
-                 $that->assertInstanceOf('Composer\Package\Link', $replace['foo/baz']);
-                 $that->assertInstanceOf('Composer\Package\Link', $replace['foo/xyzzy']);
+             $that->assertInstanceOf('Composer\Package\Link', $replace['foo/bar']);
+             $that->assertInstanceOf('Composer\Package\Link', $replace['foo/baz']);
+             $that->assertInstanceOf('Composer\Package\Link', $replace['foo/xyzzy']);
 
-                 $that->assertEquals('~8.0', $replace['foo/bar']->getPrettyConstraint());
-                 $that->assertEquals('~8.0', $replace['foo/baz']->getPrettyConstraint());
-                 $that->assertEquals('~1.0', $replace['foo/xyzzy']->getPrettyConstraint());
-            });
-
-        $root->getRequires()->shouldNotBeCalled();
+             $that->assertEquals('~8.0', $replace['foo/bar']->getPrettyConstraint());
+             $that->assertEquals('~8.0', $replace['foo/baz']->getPrettyConstraint());
+             $that->assertEquals('~1.0', $replace['foo/xyzzy']->getPrettyConstraint());
+        });
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
         $this->assertEquals(0, count($extraInstalls));
+    }
+
+    public function it_can_resolve_version_constraint_with_revision()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('it-can-resolve-version-constraint-with-revision');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setRequires(Argument::type('array'))->will(function ($args, $root) {
+            $root->getRequires()->willReturn($args[0]);
+        })->shouldBeCalled();
+
+        $root->setDevRequires(Argument::type('array'))->will(function ($args, $root) {
+            $root->getDevRequires()->willReturn($args[0]);
+        })->shouldBeCalled();
+
+        $root->setReferences(Argument::type('array'))->will(function ($args) use ($that) {
+            $references = $args[0];
+
+            $that->assertCount(3, $references);
+            $that->assertArrayHasKey('foo/bar',         $references);
+            $that->assertArrayHasKey('monolog/monolog', $references);
+            $that->assertArrayHasKey('foo/baz',         $references);
+            $that->assertSame('1234567', $references['foo/bar']);
+            $that->assertSame('cb641a8', $references['monolog/monolog']);
+            $that->assertSame('abc1234', $references['foo/baz']);
+        });
+
+        $this->triggerPlugin($root->reveal(), $dir);
     }
 
     /* ------------------------------------------------------------------------------------------------

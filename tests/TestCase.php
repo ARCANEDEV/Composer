@@ -80,13 +80,14 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
         $root->getVersion()->willReturn($vp->normalize($data['version']));
         $root->getPrettyVersion()->willReturn($data['version']);
         $root->getRequires()->willReturn($data['require'])->shouldBeCalled();
-        $root->getDevRequires()->willReturn($data['require-dev']);
+        $root->getDevRequires()->willReturn($data['require-dev'])->shouldBeCalled();
         $root->getRepositories()->willReturn($data['repositories']);
         $root->getConflicts()->willReturn($data['conflict']);
         $root->getReplaces()->willReturn($data['replace']);
         $root->getProvides()->willReturn($data['provide']);
         $root->getSuggests()->willReturn($data['suggest']);
         $root->getExtra()->willReturn($data['extra'])->shouldBeCalled();
+        $root->setReferences(Argument::type('array'))->shouldBeCalled();
         $root->getAutoload()->willReturn($data['autoload']);
         $root->getDevAutoload()->willReturn($data['autoload-dev']);
         $root->getStabilityFlags()->willReturn([]);
