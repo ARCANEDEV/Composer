@@ -69,6 +69,7 @@ class ComposerPluginTest extends TestCase
     {
         $subscriptions = ComposerPlugin::getSubscribedEvents();
         $events        = [
+            ComposerPlugin::COMPAT_PLUGINEVENTS_INIT,
             ScriptEvents::PRE_INSTALL_CMD,
             ScriptEvents::PRE_UPDATE_CMD,
             ScriptEvents::PRE_AUTOLOAD_DUMP,
@@ -78,7 +79,7 @@ class ComposerPluginTest extends TestCase
             ScriptEvents::POST_UPDATE_CMD,
         ];
 
-        $this->assertEquals(count($events), count($subscriptions));
+        $this->assertCount(count($events), $subscriptions);
 
 
         foreach ($events as $event) {
@@ -286,11 +287,11 @@ class ComposerPluginTest extends TestCase
         $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
-        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, true);
 
-        $this->assertEquals(2, count($extraInstalls));
+        $this->assertCount(2,                  $extraInstalls);
         $this->assertEquals('monolog/monolog', $extraInstalls[0][0]);
-        $this->assertEquals('foo', $extraInstalls[1][0]);
+        $this->assertEquals('foo',             $extraInstalls[1][0]);
     }
 
     /** @test */
@@ -390,9 +391,9 @@ class ComposerPluginTest extends TestCase
         $root->getSuggests()->shouldNotBeCalled();
         $root->setSuggests(Argument::any())->shouldNotBeCalled();
 
-        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, true);
 
-        $this->assertEquals(0, count($extraInstalls));
+        $this->assertCount(0, $extraInstalls);
     }
 
     /**
@@ -524,9 +525,9 @@ class ComposerPluginTest extends TestCase
         $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
-        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, true);
 
-        $this->assertEquals(0, count($extraInstalls));
+        $this->assertCount(0, $extraInstalls);
     }
 
     /**
@@ -730,7 +731,7 @@ class ComposerPluginTest extends TestCase
             $alias->getAliasOf()->shouldBeCalled();
         }
 
-        $this->triggerPlugin($alias->reveal(), $dir);
+        $this->triggerPlugin($alias->reveal(), $dir, true);
     }
 
     /**
@@ -811,7 +812,7 @@ class ComposerPluginTest extends TestCase
              });
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
-        $this->assertEquals(0, count($extraInstalls));
+        $this->assertCount(0, $extraInstalls);
     }
 
     /** @test */
@@ -838,8 +839,8 @@ class ComposerPluginTest extends TestCase
              $that->assertEquals('~1.0', $replace['foo/xyzzy']->getPrettyConstraint());
         });
 
-        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
-        $this->assertEquals(0, count($extraInstalls));
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, true);
+        $this->assertCount(0, $extraInstalls);
     }
 
     /** @test */
@@ -857,19 +858,37 @@ class ComposerPluginTest extends TestCase
             $root->getDevRequires()->willReturn($args[0]);
         })->shouldBeCalled();
 
-        $root->setReferences(Argument::type('array'))->will(function ($args) use ($that) {
+        $checkRefsWithDev = function ($args) use ($that) {
             $references = $args[0];
+            $that->assertEquals(3, count($references));
 
-            $that->assertCount(3, $references);
-            $that->assertArrayHasKey('foo/bar',         $references);
+            $that->assertArrayHasKey('foo/bar', $references);
             $that->assertArrayHasKey('monolog/monolog', $references);
-            $that->assertArrayHasKey('foo/baz',         $references);
-            $that->assertSame('1234567', $references['foo/bar']);
-            $that->assertSame('cb641a8', $references['monolog/monolog']);
-            $that->assertSame('abc1234', $references['foo/baz']);
-        });
+            $that->assertArrayHasKey('foo/baz', $references);
+            $that->assertSame($references['foo/bar'], '1234567');
+            $that->assertSame($references['monolog/monolog'], 'cb641a8');
+            $that->assertSame($references['foo/baz'], 'abc1234');
+        };
+
+        $root->setReferences(Argument::type('array'))->will($checkRefsWithDev);
 
         $this->triggerPlugin($root->reveal(), $dir);
+
+        $root->setReferences(Argument::type('array'))->will(function ($args) use ($that, $root, $checkRefsWithDev) {
+            $references = $args[0];
+
+            $that->assertCount(2, $references);
+            $that->assertArrayHasKey('foo/bar',         $references);
+            $that->assertArrayHasKey('monolog/monolog', $references);
+            $that->assertSame('1234567', $references['foo/bar']);
+            $that->assertSame('cb641a8', $references['monolog/monolog']);
+
+            // onInit does parse without require-dev, so this is called a second time when onInstallUpdateOrDump()
+            // fires with the dev section parsed as well.
+            $root->setReferences(Argument::type('array'))->will($checkRefsWithDev);
+        });
+
+        $this->triggerPlugin($root->reveal(), $dir, true);
     }
 
     /**
@@ -945,22 +964,28 @@ class ComposerPluginTest extends TestCase
     /**
      * Trigger the composer plugin
      *
-     * @param  RootPackage $package
-     * @param  string      $directory Working directory for composer run
-     * @param  bool        $devMode
+     * @param  RootPackage  $package
+     * @param  string       $directory Working directory for composer run
+     * @param  bool         $fireInit
      *
      * @return array
      */
-    protected function triggerPlugin($package, $directory, $devMode = true)
+    protected function triggerPlugin($package, $directory, $fireInit = false)
     {
         chdir($directory);
         $this->composer->getPackage()->willReturn($package);
+
+        if ($fireInit) {
+            $this->plugin->onInit(new \Composer\EventDispatcher\Event(
+                ComposerPlugin::COMPAT_PLUGINEVENTS_INIT
+            ));
+        }
 
         $this->plugin->onInstallUpdateOrDump(new Event(
             ScriptEvents::PRE_INSTALL_CMD,
             $this->composer->reveal(),
             $this->io->reveal(),
-            $devMode,
+            true,
             [],
             []
         ));
@@ -977,7 +1002,7 @@ class ComposerPluginTest extends TestCase
             InstallerEvents::PRE_DEPENDENCIES_SOLVING,
             $this->composer->reveal(),
             $this->io->reveal(),
-            $devMode,
+            true,
             $this->prophesize('Composer\\DependencyResolver\\PolicyInterface')->reveal(),
             $this->prophesize('Composer\\DependencyResolver\\Pool')->reveal(),
             $this->prophesize('Composer\\Repository\\CompositeRepository')->reveal(),
@@ -989,7 +1014,7 @@ class ComposerPluginTest extends TestCase
             ScriptEvents::PRE_AUTOLOAD_DUMP,
             $this->composer->reveal(),
             $this->io->reveal(),
-            $devMode,
+            true,
             [],
             ['optimize' => true]
         ));
@@ -998,7 +1023,7 @@ class ComposerPluginTest extends TestCase
             ScriptEvents::POST_INSTALL_CMD,
             $this->composer->reveal(),
             $this->io->reveal(),
-            $devMode,
+            true,
             [],
             []
         ));

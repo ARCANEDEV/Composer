@@ -105,18 +105,28 @@ class Package
 
         $this->mergeRequires($root, $state);
         $this->mergeAutoload($root);
-
-        if ($state->isDevMode()) {
-            $this->mergeDevRequires($root, $state);
-            $this->mergeDevAutoload($root);
-        }
-
         $this->mergePackageLinks('conflict', $root);
         $this->mergePackageLinks('replace',  $root);
         $this->mergePackageLinks('provide',  $root);
-
         $this->mergeSuggests($root);
         $this->mergeExtra($root, $state);
+
+        if ($state->isDevMode())
+            $this->mergeDevInto($root, $state);
+        else
+            $this->mergeReferences($root);
+    }
+
+    /**
+     * Merge just the dev portion into a RootPackageInterface.
+     *
+     * @param  \Composer\Package\RootPackageInterface    $root
+     * @param  \Arcanedev\Composer\Entities\PluginState  $state
+     */
+    public function mergeDevInto(RootPackageInterface $root, PluginState $state)
+    {
+        $this->mergeDevRequires($root, $state);
+        $this->mergeDevAutoload($root);
         $this->mergeReferences($root);
     }
 
