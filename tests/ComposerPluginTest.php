@@ -818,7 +818,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_resolve_self_version_constraint_through_packages_from_the_root_package()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('it-can-resolve-self-version-constraint-through-packages-from-the-root-package');
+        $dir  = $this->fixtureDir('resolve-self-version-constraint-through-packages-from-the-root-package');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setReplaces(Argument::type('array'))->will(function ($args) use ($that) {
@@ -842,10 +842,11 @@ class ComposerPluginTest extends TestCase
         $this->assertEquals(0, count($extraInstalls));
     }
 
+    /** @test */
     public function it_can_resolve_version_constraint_with_revision()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('it-can-resolve-version-constraint-with-revision');
+        $dir  = $this->fixtureDir('resolve-version-constraint-with-revision');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))->will(function ($args, $root) {
@@ -869,6 +870,61 @@ class ComposerPluginTest extends TestCase
         });
 
         $this->triggerPlugin($root->reveal(), $dir);
+    }
+
+    /**
+     * @test
+     *
+     * Given a root package with an extra section
+     *   and prepend-repositories mode is active
+     *   and a composer.local.json with a repository
+     * When the plugin is run
+     * Then the repository from composer.local.json should be prepended to root package repository list
+     */
+    public function it_can_prepend_repositories()
+    {
+        $that        = $this;
+        $io          = $this->io;
+        $repoManager = $this->prophesize('Composer\Repository\RepositoryManager');
+
+        $repoManager->createRepository(Argument::type('string'), Argument::type('array'))
+            ->will(function ($args) use ($that, $io) {
+                $that->assertEquals('vcs', $args[0]);
+                $that->assertEquals('https://github.com/ARCANEDEV/Composer.git', $args[1]['url']);
+
+                return new \Composer\Repository\VcsRepository($args[1], $io->reveal(), new \Composer\Config);
+            });
+
+        $repoManager->prependRepository(Argument::any())->will(function ($args) use ($that) {
+            $that->assertInstanceOf('Composer\Repository\VcsRepository', $args[0]);
+        });
+
+        $this->composer->getRepositoryManager()->will(function () use ($repoManager) {
+            return $repoManager->reveal();
+        });
+
+        $dir  = $this->fixtureDir('prepend-repositories');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setRequires()->shouldNotBeCalled();
+        $root->setDevRequires()->shouldNotBeCalled();
+
+        $root->setRepositories(Argument::type('array'))->will(function ($args) use ($that) {
+            $repos = $args[0];
+            $that->assertEquals(2, count($repos));
+            $prependedRepo = $repos[0];
+            $that->assertInstanceOf('Composer\Repository\VcsRepository', $prependedRepo);
+            $that->assertAttributeEquals('https://github.com/ARCANEDEV/Composer.git', 'url', $prependedRepo);
+        });
+
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
+        $root->getSuggests()->shouldNotBeCalled();
+
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+
+        $this->assertEquals(0, count($extraInstalls));
     }
 
     /* ------------------------------------------------------------------------------------------------

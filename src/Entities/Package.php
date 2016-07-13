@@ -101,7 +101,7 @@ class Package
      */
     public function mergeInto(RootPackageInterface $root, PluginState $state)
     {
-        $this->addRepositories($root);
+        $this->addRepositories($root, $state->shouldPrependRepositories());
 
         $this->mergeRequires($root, $state);
         $this->mergeAutoload($root);
@@ -125,8 +125,9 @@ class Package
      * to the given package and the global repository manager.
      *
      * @param  \Composer\Package\RootPackageInterface  $root
+     * @param  bool                                    $prepend
      */
-    private function addRepositories(RootPackageInterface $root)
+    private function addRepositories(RootPackageInterface $root, $prepend)
     {
         if ( ! isset($this->json['repositories'])) return;
 
@@ -134,11 +135,15 @@ class Package
         $repositories = [];
 
         foreach ($this->json['repositories'] as $repoJson) {
-            $this->addRepository($repoManager, $repositories, $repoJson);
+            $this->addRepository($repoManager, $repositories, $repoJson, $prepend);
         }
 
-        self::unwrapIfNeeded($root, 'setRepositories')
-            ->setRepositories(array_merge($repositories, $root->getRepositories()));
+        $unwrapped   = self::unwrapIfNeeded($root, 'setRepositories');
+        $mergedRepos = $prepend
+            ? array_merge($repositories, $root->getRepositories())
+            : array_merge($root->getRepositories(), $repositories);
+
+        $unwrapped->setRepositories($mergedRepos);
     }
 
     /**
@@ -147,21 +152,26 @@ class Package
      * @param  \Composer\Repository\RepositoryManager  $repoManager
      * @param  array                                   $repositories
      * @param  array                                   $repoJson
+     * @param  bool                                    $prepend
      */
     private function addRepository(
         RepositoryManager $repoManager,
         array &$repositories,
-        $repoJson
+        $repoJson,
+        $prepend
     ) {
         if ( ! isset($repoJson['type'])) return;
 
-        $this->logger->info("Adding {$repoJson['type']} repository");
-
-        $repository = $repoManager->createRepository(
-            $repoJson['type'], $repoJson
+        $this->logger->info(
+            $prepend ? "Prepending {$repoJson['type']} repository" : "Adding {$repoJson['type']} repository"
         );
 
-        $repoManager->addRepository($repository);
+        $repository = $repoManager->createRepository($repoJson['type'], $repoJson);
+
+        $prepend
+            ? $repoManager->prependRepository($repository)
+            : $repoManager->addRepository($repository);
+
         $repositories[] = $repository;
     }
 
