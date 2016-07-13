@@ -67,6 +67,13 @@ class PluginState
     /** @var bool */
     protected $optimizeAutoloader = false;
 
+    /**
+     * Whether to prepend repositories to repository manager.
+     *
+     * @var bool
+     */
+    protected $prependRepositories = false;
+
     /* ------------------------------------------------------------------------------------------------
      |  Constructor
      | ------------------------------------------------------------------------------------------------
@@ -226,6 +233,16 @@ class PluginState
     }
 
     /**
+     * Should the merger prepend repositories to repository manager (instead of adding them to end of the list).
+     *
+     * @return bool
+     */
+    public function shouldPrependRepositories()
+    {
+        return $this->prependRepositories;
+    }
+
+    /**
      * Add duplicate packages.
      *
      * @param  string  $type
@@ -316,14 +333,16 @@ class PluginState
      */
     public function loadSettings()
     {
-        $extra            = $this->composer->getPackage()->getExtra();
-        $config           = $this->mergeConfig($extra);
-        $this->includes   = is_array($config['include']) ? $config['include'] : [$config['include']];
-        $this->requires   = is_array($config['require']) ? $config['require'] : [$config['require']];
-        $this->recurse    = (bool) $config['recurse'];
-        $this->replace    = (bool) $config['replace'];
-        $this->mergeDev   = (bool) $config['merge-dev'];
-        $this->mergeExtra = (bool) $config['merge-extra'];
+        $extra                     = $this->composer->getPackage()->getExtra();
+        $config                    = $this->mergeConfig($extra);
+        $this->includes            = is_array($config['include']) ? $config['include'] : [$config['include']];
+        $this->requires            = is_array($config['require']) ? $config['require'] : [$config['require']];
+        $this->recurse             = (bool) $config['recurse'];
+        $this->replace             = (bool) $config['replace'];
+        $this->prependRepositories = (bool) $config['prepend-repositories'];
+        $this->mergeDev            = (bool) $config['merge-dev'];
+        $this->mergeExtra          = (bool) $config['merge-extra'];
+
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -341,12 +360,13 @@ class PluginState
     {
         return array_merge(
             [
-                'include'     => [],
-                'require'     => [],
-                'recurse'     => true,
-                'replace'     => false,
-                'merge-dev'   => true,
-                'merge-extra' => false,
+                'include'              => [],
+                'require'              => [],
+                'recurse'              => true,
+                'replace'              => false,
+                'prepend-repositories' => false,
+                'merge-dev'            => true,
+                'merge-extra'          => false,
             ],
             isset($extra['merge-plugin']) ? $extra['merge-plugin'] : []
         );

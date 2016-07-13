@@ -1,0 +1,17 @@
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/ARCANESOFT/Composer.git"
+        }
+    ],
+    "require": {
+        "arcanedev/composer": "dev-master#abcd1234"
+    },
+    "extra": {
+        "merge-plugin": {
+            "include": "composer.local.json",
+            "prepend-repositories": true
+        }
+    }
+}
