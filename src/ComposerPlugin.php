@@ -7,6 +7,7 @@ use Arcanedev\Composer\Utilities\Logger;
 use Composer\Composer;
 use Composer\DependencyResolver\Operation\InstallOperation;
 use Composer\DependencyResolver\Request;
+use Composer\EventDispatcher\Event as BaseEvent;
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\Factory;
 use Composer\Installer;
@@ -17,7 +18,7 @@ use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
 use Composer\Package\RootPackageInterface;
 use Composer\Plugin\PluginInterface;
-use Composer\Script\Event;
+use Composer\Script\Event as ScriptEvent;
 use Composer\Script\ScriptEvents;
 
 /**
@@ -38,6 +39,11 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     const PACKAGE_NAME = 'arcanedev/composer';
 
     /**
+     * Name of the composer 1.1 init event.
+     */
+    const COMPAT_PLUGINEVENTS_INIT = 'init';
+
+    /**
      * Plugin key
      */
     const PLUGIN_KEY = 'merge-plugin';
@@ -56,11 +62,18 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     protected $logger;
 
     /**
-     * Files that have already been processed
+     * Files that have already been fully processed.
      *
      * @var array
      */
-    protected $loadedFiles = [];
+    protected $loaded = [];
+
+    /**
+     * Files that have already been partially processed.
+     *
+     * @var array
+     */
+    protected $loadedNoDev = [];
 
     /* ------------------------------------------------------------------------------------------------
      |  Main Functions
@@ -87,6 +100,9 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
+            // Use our own constant to make this event optional.
+            // Once composer-1.1 is required, this can use PluginEvents::INIT instead.
+            self::COMPAT_PLUGINEVENTS_INIT            => 'onInit',
             InstallerEvents::PRE_DEPENDENCIES_SOLVING => 'onDependencySolve',
             ScriptEvents::PRE_INSTALL_CMD             => 'onInstallUpdateOrDump',
             ScriptEvents::PRE_UPDATE_CMD              => 'onInstallUpdateOrDump',
@@ -95,6 +111,21 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             ScriptEvents::POST_INSTALL_CMD            => 'onPostInstallOrUpdate',
             ScriptEvents::POST_UPDATE_CMD             => 'onPostInstallOrUpdate',
         ];
+    }
+
+    /**
+     * Handle an event callback for initialization.
+     *
+     * @param  \Composer\EventDispatcher\Event  $event
+     */
+    public function onInit(BaseEvent $event)
+    {
+        $this->state->loadSettings();
+        // It is not possible to know if the user specified --dev or --no-dev so assume it is false.
+        // The dev section will be merged later when the other events fire.
+        $this->state->setDevMode(false);
+        $this->mergeFiles($this->state->getIncludes(), false);
+        $this->mergeFiles($this->state->getRequires(), true);
     }
 
     /**
@@ -144,7 +175,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      *
      * @param  \Composer\Script\Event  $event
      */
-    public function onInstallUpdateOrDump(Event $event)
+    public function onInstallUpdateOrDump(ScriptEvent $event)
     {
         $this->state->loadSettings();
         $this->state->setDevMode($event->isDevMode());
@@ -196,16 +227,30 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     private function mergeFile(RootPackageInterface $root, $path)
     {
-        if (isset($this->loadedFiles[$path])) {
-            $this->logger->debug("Skipping duplicate <comment>$path</comment>");
-
+        if (
+            isset($this->loaded[$path]) ||
+            (isset($this->loadedNoDev[$path]) && ! $this->state->isDevMode())
+        ) {
+            $this->logger->debug("Already merged <comment>$path</comment> completely");
             return;
         }
 
-        $this->loadedFiles[$path] = true;
-        $this->logger->info("Loading <comment>{$path}</comment>...");
         $package = new Package($path, $this->composer, $this->logger);
-        $package->mergeInto($root, $this->state);
+
+        // If something was already loaded, merge just the dev section.
+        if (isset($this->loadedNoDev[$path])) {
+            $this->logger->info("Loading -dev sections of <comment>{$path}</comment>...");
+            $package->mergeDevInto($root, $this->state);
+        }
+        else {
+            $this->logger->info("Loading <comment>{$path}</comment>...");
+            $package->mergeInto($root, $this->state);
+        }
+
+        if ($this->state->isDevMode())
+            $this->loaded[$path] = true;
+        else
+            $this->loadedNoDev[$path] = true;
 
         if ($this->state->recurseIncludes()) {
             $this->mergeFiles($package->getIncludes());
@@ -245,7 +290,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      *
      * @codeCoverageIgnore
      */
-    public function onPostInstallOrUpdate(Event $event)
+    public function onPostInstallOrUpdate(ScriptEvent $event)
     {
         if ($this->state->isFirstInstall()) {
             $this->state->setFirstInstall(false);
@@ -265,7 +310,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      *
      * @codeCoverageIgnore
      */
-    private function runFirstInstall(Event $event)
+    private function runFirstInstall(ScriptEvent $event)
     {
         $installer    = Installer::create(
             $event->getIO(),
