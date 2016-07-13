@@ -55,6 +55,22 @@ class PluginState
      */
     protected $mergeExtra = false;
 
+    /**
+     * Whether to merge the extra section in a deep / recursive way.
+     *
+     * By default the extra section is merged with array_merge() and duplicate keys are ignored.
+     * When enabled this allows to merge the arrays recursively using the following rule:
+     *   Integer keys are merged, while array values are replaced where the later values overwrite the former.
+     *
+     * This is useful especially for the extra section when plugins use larger structures like a 'patches' key with
+     * the packages as sub-keys and the patches as values.
+     *
+     * When 'replace' mode is activated the order of array merges is exchanged.
+     *
+     * @var bool
+     */
+    protected $mergeExtraDeep = false;
+
     /** @var bool */
     protected $firstInstall = false;
 
@@ -111,7 +127,7 @@ class PluginState
      */
     public function setFirstInstall($flag)
     {
-        $this->firstInstall = (bool)$flag;
+        $this->firstInstall = (bool) $flag;
 
         return $this;
     }
@@ -324,6 +340,16 @@ class PluginState
         return $this->mergeExtra;
     }
 
+    /**
+     * Should the extra section be merged deep / recursively?
+     *
+     * @return bool
+     */
+    public function shouldMergeExtraDeep()
+    {
+        return $this->mergeExtraDeep;
+    }
+
     /* ------------------------------------------------------------------------------------------------
      |  Main Functions
      | ------------------------------------------------------------------------------------------------
@@ -342,6 +368,7 @@ class PluginState
         $this->prependRepositories = (bool) $config['prepend-repositories'];
         $this->mergeDev            = (bool) $config['merge-dev'];
         $this->mergeExtra          = (bool) $config['merge-extra'];
+        $this->mergeExtraDeep      = (bool) $config['merge-extra-deep'];
 
     }
 
@@ -367,6 +394,7 @@ class PluginState
                 'prepend-repositories' => false,
                 'merge-dev'            => true,
                 'merge-extra'          => false,
+                'merge-extra-deep'     => false,
             ],
             isset($extra['merge-plugin']) ? $extra['merge-plugin'] : []
         );

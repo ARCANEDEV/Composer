@@ -258,8 +258,14 @@ class ComposerPluginTest extends TestCase
         $this->assertEquals(0, count($extraInstalls));
     }
 
-    /** @test */
-    public function it_can_one_merge_with_conflicts()
+    /**
+     * @test
+     *
+     * @dataProvider provideFireInit
+     *
+     * @param  bool  $fireInit
+     */
+    public function it_can_one_merge_with_conflicts($fireInit)
     {
         $that   = $this;
         $dir    = $this->fixtureDir('one-merge-with-conflicts');
@@ -287,7 +293,7 @@ class ComposerPluginTest extends TestCase
         $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
-        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, true);
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
 
         $this->assertCount(2,                  $extraInstalls);
         $this->assertEquals('monolog/monolog', $extraInstalls[0][0]);
@@ -350,11 +356,17 @@ class ComposerPluginTest extends TestCase
         $this->assertEquals(0, count($extraInstalls));
     }
 
-    /** @test */
-    public function it_can_update_stability_flags()
+    /**
+     * @test
+     *
+     * @dataProvider provideFireInit
+     *
+     * @param  bool  $fireInit
+     */
+    public function it_can_update_stability_flags($fireInit)
     {
         $that = $this;
-        $dir = $this->fixtureDir('update-stability-flags');
+        $dir  = $this->fixtureDir('update-stability-flags');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
@@ -391,7 +403,7 @@ class ComposerPluginTest extends TestCase
         $root->getSuggests()->shouldNotBeCalled();
         $root->setSuggests(Argument::any())->shouldNotBeCalled();
 
-        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, true);
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
 
         $this->assertCount(0, $extraInstalls);
     }
@@ -504,8 +516,12 @@ class ComposerPluginTest extends TestCase
      *   and a composer.local.json with an extra section with no conflicting keys
      * When the plugin is run
      * Then the root package extra section should be extended with content from the local config.
+     *
+     * @dataProvider provideFireInit
+     *
+     * @param  bool  $fireInit
      */
-    public function it_can_merge_extra()
+    public function it_can_merge_extra($fireInit)
     {
         $that = $this;
         $dir  = $this->fixtureDir('merge-extra');
@@ -525,7 +541,7 @@ class ComposerPluginTest extends TestCase
         $root->getProvides()->shouldNotBeCalled();
         $root->getSuggests()->shouldNotBeCalled();
 
-        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, true);
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
 
         $this->assertCount(0, $extraInstalls);
     }
@@ -600,6 +616,70 @@ class ComposerPluginTest extends TestCase
 
     /**
      * @test
+     *
+     * Given a root package with an extra section
+     *   and a composer.local.json with an extra section with conflicting keys that are arrays
+     *   and the 'merge-extra-deep' option being activated
+     * When the plugin is run
+     * Then the root package extra section should be extended with content from the base config
+     *   and deep keys should be merged together, but root config wins on key conflicts.
+     *
+     * @dataProvider provideDeepMerge
+     *
+     * @param  string  $suffix
+     * @param  bool    $replace
+     */
+    public function it_can_merge_extra_deep($suffix, $replace)
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('merge-extra-deep' . $suffix);
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setExtra(Argument::type('array'))->will(function ($args) use ($that, $replace) {
+            $extra = $args[0];
+
+            $that->assertCount(3, $extra);
+            $that->assertArrayHasKey('merge-plugin', $extra);
+            $that->assertCount(4, $extra['merge-plugin']);
+            $that->assertArrayHasKey('patches', $extra);
+            $that->assertArrayHasKey('arcanedev/composer', $extra['patches']);
+
+            $patches = $extra['patches']['arcanedev/composer'];
+            $key = 'Allow merging of sections in a deep way';
+            $that->assertEquals('patches/add-merge-extra-deep-option.diff', $patches[$key]);
+
+            $key = 'Add tests for merge-extra-deep option';
+            $that->assertEquals('patches/add-tests-for-merge-extra-deep-option.diff', $patches[$key]);
+            $that->assertArrayHasKey('somevendor/some-project', $extra['patches']);
+            $that->assertArrayHasKey('some-patch', $extra['patches']['somevendor/some-project']);
+
+            $value = $extra['patches']['somevendor/some-project']['some-patch'];
+            $that->assertEquals('patches/overridden-patch.diff', $value);
+
+            if ( ! $replace) {
+                $that->assertArrayHasKey('base-patch', $extra['patches']['somevendor/some-project']);
+                $value = $extra['patches']['somevendor/some-project']['base-patch'];
+                $that->assertEquals('patches/always-patch.diff', $value);
+            }
+
+            $that->assertArrayHasKey('anothervendor/some-project', $extra['patches']);
+            $that->assertArrayHasKey('another-patch', $extra['patches']['anothervendor/some-project']);
+            $that->assertEquals(['first', 'second', 'third', 'fourth'], $extra['list']);
+        })->shouldBeCalled();
+
+        $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
+        $root->getSuggests()->shouldNotBeCalled();
+
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+
+        $this->assertCount(0, $extraInstalls);
+    }
+
+    /**
+     * @test
      * @dataProvider provideOnPostPackageInstall
      *
      * @param string $package  Package installed
@@ -663,8 +743,12 @@ class ComposerPluginTest extends TestCase
      * Given a root package with a branch alias
      * When the plugin is run
      * Then the root package will be unwrapped from the alias.
+     *
+     * @dataProvider provideFireInit
+     *
+     * @param  bool  $fireInit
      */
-    public function it_has_branch_alias()
+    public function it_has_branch_alias($fireInit)
     {
         $that = $this;
         $io   = $this->io;
@@ -731,7 +815,7 @@ class ComposerPluginTest extends TestCase
             $alias->getAliasOf()->shouldBeCalled();
         }
 
-        $this->triggerPlugin($alias->reveal(), $dir, true);
+        $this->triggerPlugin($alias->reveal(), $dir, $fireInit);
     }
 
     /**
@@ -815,8 +899,14 @@ class ComposerPluginTest extends TestCase
         $this->assertCount(0, $extraInstalls);
     }
 
-    /** @test */
-    public function it_can_resolve_self_version_constraint_through_packages_from_the_root_package()
+    /**
+     * @test
+     *
+     * @dataProvider provideFireInit
+     *
+     * @param  bool  $fireInit
+     */
+    public function it_can_resolve_self_version_constraint_through_packages_from_the_root_package($fireInit)
     {
         $that = $this;
         $dir  = $this->fixtureDir('resolve-self-version-constraint-through-packages-from-the-root-package');
@@ -839,12 +929,18 @@ class ComposerPluginTest extends TestCase
              $that->assertEquals('~1.0', $replace['foo/xyzzy']->getPrettyConstraint());
         });
 
-        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, true);
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
         $this->assertCount(0, $extraInstalls);
     }
 
-    /** @test */
-    public function it_can_resolve_version_constraint_with_revision()
+    /**
+     * @test
+     *
+     * @dataProvider provideFireInit
+     *
+     * @param  bool  $fireInit
+     */
+    public function it_can_resolve_version_constraint_with_revision($fireInit)
     {
         $that = $this;
         $dir  = $this->fixtureDir('resolve-version-constraint-with-revision');
@@ -858,37 +954,40 @@ class ComposerPluginTest extends TestCase
             $root->getDevRequires()->willReturn($args[0]);
         })->shouldBeCalled();
 
-        $checkRefsWithDev = function ($args) use ($that) {
+        $checkRefs = $checkRefsWithDev = function ($args) use ($that) {
             $references = $args[0];
             $that->assertEquals(3, count($references));
 
             $that->assertArrayHasKey('foo/bar', $references);
             $that->assertArrayHasKey('monolog/monolog', $references);
             $that->assertArrayHasKey('foo/baz', $references);
+
             $that->assertSame($references['foo/bar'], '1234567');
             $that->assertSame($references['monolog/monolog'], 'cb641a8');
             $that->assertSame($references['foo/baz'], 'abc1234');
         };
 
-        $root->setReferences(Argument::type('array'))->will($checkRefsWithDev);
+        if ($fireInit) {
+            $checkRefs = function ($args) use ($that, $root, $checkRefsWithDev) {
+                $references = $args[0];
+                $that->assertEquals(2, count($references));
 
-        $this->triggerPlugin($root->reveal(), $dir);
+                $that->assertArrayHasKey('foo/bar', $references);
+                $that->assertArrayHasKey('monolog/monolog', $references);
 
-        $root->setReferences(Argument::type('array'))->will(function ($args) use ($that, $root, $checkRefsWithDev) {
-            $references = $args[0];
+                $that->assertSame($references['foo/bar'], '1234567');
+                $that->assertSame($references['monolog/monolog'], 'cb641a8');
 
-            $that->assertCount(2, $references);
-            $that->assertArrayHasKey('foo/bar',         $references);
-            $that->assertArrayHasKey('monolog/monolog', $references);
-            $that->assertSame('1234567', $references['foo/bar']);
-            $that->assertSame('cb641a8', $references['monolog/monolog']);
+                // onInit does parse without require-dev, so this is called a
+                // second time when onInstallUpdateOrDump() fires with the dev
+                // section parsed as well.
+                $root->setReferences(Argument::type('array'))->will($checkRefsWithDev);
+            };
+        }
 
-            // onInit does parse without require-dev, so this is called a second time when onInstallUpdateOrDump()
-            // fires with the dev section parsed as well.
-            $root->setReferences(Argument::type('array'))->will($checkRefsWithDev);
-        });
+        $root->setReferences(Argument::type('array'))->will($checkRefs);
 
-        $this->triggerPlugin($root->reveal(), $dir, true);
+        $this->triggerPlugin($root->reveal(), $dir, $fireInit);
     }
 
     /**
@@ -1042,6 +1141,30 @@ class ComposerPluginTest extends TestCase
             [ComposerPlugin::PACKAGE_NAME, true, true],
             [ComposerPlugin::PACKAGE_NAME, true, false],
             ['foo/bar', false, false],
+        ];
+    }
+
+    /**
+     * @return array
+     */
+    public function provideDeepMerge()
+    {
+        return [
+            ['-replace', true],
+            ['', false],
+        ];
+    }
+
+    /**
+     * Generic provider for tests that should be tried with and without an INIT event.
+     *
+     * @return array
+     */
+    public function provideFireInit()
+    {
+        return [
+            'with INIT event'    => [true],
+            'without INIT event' => [false],
         ];
     }
 }
