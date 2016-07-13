@@ -1,6 +1,7 @@
 <?php namespace Arcanedev\Composer\Entities;
 
 use Arcanedev\Composer\Utilities\Logger;
+use Arcanedev\Composer\Utilities\NestedArray;
 use Arcanedev\Composer\Utilities\Util;
 use Composer\Composer;
 use Composer\Package\BasePackage;
@@ -406,19 +407,37 @@ class Package
         RootPackageInterface $root, PluginState $state, $extra
     ) {
         $rootExtra   = $root->getExtra();
-        $mergedExtra = array_merge($rootExtra, $extra);
 
         if ($state->replaceDuplicateLinks()) {
-            return $mergedExtra;
+            return self::mergeExtraArray($state->shouldMergeExtraDeep(), $rootExtra, $extra);
         }
 
-        foreach (array_intersect(array_keys($extra), array_keys($rootExtra)) as $key) {
-            $this->logger->info(
-                "Ignoring duplicate <comment>{$key}</comment> in <comment>{$this->path}</comment> extra config."
-            );
-        }
+        if ( ! $state->shouldMergeExtraDeep()) {
+            foreach (array_intersect(array_keys($extra), array_keys($rootExtra)) as $key) {
+                $this->logger->info(
+                    "Ignoring duplicate <comment>{$key}</comment> in ".
+                    "<comment>{$this->path}</comment> extra config."
+                );
+            }
+         }
 
-        return array_merge($extra, $rootExtra);
+        return self::mergeExtraArray($state->shouldMergeExtraDeep(), $extra, $rootExtra);
+    }
+
+    /**
+     * Merges two arrays either via arrayMergeDeep or via array_merge.
+     *
+     * @param  bool  $mergeDeep
+     * @param  array  $array1
+     * @param  array  $array2
+     *
+     * @return array
+     */
+    public static function mergeExtraArray($mergeDeep, $array1, $array2)
+    {
+        return $mergeDeep
+            ? NestedArray::mergeDeep($array1, $array2)
+            : array_merge($array1, $array2);
     }
 
     /**
