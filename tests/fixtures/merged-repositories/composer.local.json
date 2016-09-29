@@ -2,7 +2,7 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "https://github.com/bd808/composer-merge-plugin.git"
+            "url": "https://github.com/arcanedev-maroc/Composer.git"
         },
         {
             "packagist": false
