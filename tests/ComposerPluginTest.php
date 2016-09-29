@@ -313,7 +313,7 @@ class ComposerPluginTest extends TestCase
             ->will(function ($args) use ($that, $io) {
                 $that->assertEquals('vcs', $args[0]);
                 $that->assertEquals(
-                    'https://github.com/bd808/composer-merge-plugin.git',
+                    'https://github.com/arcanedev-maroc/Composer.git',
                     $args[1]['url']
                 );
 
@@ -324,7 +324,7 @@ class ComposerPluginTest extends TestCase
                 );
             });
 
-        $repoManager->addRepository(Argument::any())->will(function ($args) use ($that) {
+        $repoManager->prependRepository(Argument::any())->will(function ($args) use ($that) {
             $that->assertInstanceOf('Composer\Repository\VcsRepository', $args[0]);
         });
 
@@ -771,7 +771,7 @@ class ComposerPluginTest extends TestCase
                 );
             });
 
-        $repoManager->addRepository(Argument::any())->shouldBeCalled();
+        $repoManager->prependRepository(Argument::any())->shouldBeCalled();
 
         $this->composer->getRepositoryManager()->will(function () use ($repoManager) {
             return $repoManager->reveal();

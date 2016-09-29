@@ -162,8 +162,7 @@ class Package
      */
     public function mergeInto(RootPackageInterface $root, PluginState $state)
     {
-        $this->addRepositories($root, $state);
-
+        $this->prependRepositories($root);
         $this->mergeRequires($root, $state);
         $this->mergeAutoload($root);
         $this->mergePackageLinks('conflict', $root);
