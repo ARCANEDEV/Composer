@@ -144,7 +144,10 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
             $request, $this->state->getDuplicateLinks('require')
         );
 
-        if ($this->state->isDevMode()) {
+        // Check devMode of event rather than our global state.
+        // Composer fires the PRE_DEPENDENCIES_SOLVING event twice for `--no-dev`
+        // operations to decide which packages are dev only requirements.
+        if ($this->state->shouldMergeDev() && $event->isDevMode()) {
             $this->installRequires(
                 $request, $this->state->getDuplicateLinks('require-dev'), true
             );
