@@ -48,6 +48,11 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     const PLUGIN_KEY = 'merge-plugin';
 
+    /**
+     * Priority that plugin uses to register callbacks.
+     */
+    const CALLBACK_PRIORITY = 50000;
+
     /* ------------------------------------------------------------------------------------------------
      |  Properties
      | ------------------------------------------------------------------------------------------------
@@ -102,14 +107,14 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         return [
             // Use our own constant to make this event optional.
             // Once composer-1.1 is required, this can use PluginEvents::INIT instead.
-            self::COMPAT_PLUGINEVENTS_INIT            => 'onInit',
-            InstallerEvents::PRE_DEPENDENCIES_SOLVING => 'onDependencySolve',
-            ScriptEvents::PRE_INSTALL_CMD             => 'onInstallUpdateOrDump',
-            ScriptEvents::PRE_UPDATE_CMD              => 'onInstallUpdateOrDump',
-            ScriptEvents::PRE_AUTOLOAD_DUMP           => 'onInstallUpdateOrDump',
-            PackageEvents::POST_PACKAGE_INSTALL       => 'onPostPackageInstall',
-            ScriptEvents::POST_INSTALL_CMD            => 'onPostInstallOrUpdate',
-            ScriptEvents::POST_UPDATE_CMD             => 'onPostInstallOrUpdate',
+            self::COMPAT_PLUGINEVENTS_INIT            => ['onInit', self::CALLBACK_PRIORITY],
+            InstallerEvents::PRE_DEPENDENCIES_SOLVING => ['onDependencySolve', self::CALLBACK_PRIORITY],
+            PackageEvents::POST_PACKAGE_INSTALL       => ['onPostPackageInstall', self::CALLBACK_PRIORITY],
+            ScriptEvents::POST_INSTALL_CMD            => ['onPostInstallOrUpdate', self::CALLBACK_PRIORITY],
+            ScriptEvents::POST_UPDATE_CMD             => ['onPostInstallOrUpdate', self::CALLBACK_PRIORITY],
+            ScriptEvents::PRE_AUTOLOAD_DUMP           => ['onInstallUpdateOrDump', self::CALLBACK_PRIORITY],
+            ScriptEvents::PRE_INSTALL_CMD             => ['onInstallUpdateOrDump', self::CALLBACK_PRIORITY],
+            ScriptEvents::PRE_UPDATE_CMD              => ['onInstallUpdateOrDump', self::CALLBACK_PRIORITY],
         ];
     }
 
