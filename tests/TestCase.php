@@ -52,6 +52,7 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
                 'provide'           => [],
                 'suggest'           => [],
                 'extra'             => [],
+                'scripts'           => [],
                 'autoload'          => [],
                 'autoload-dev'      => [],
                 'minimum-stability' => 'stable',
@@ -87,11 +88,13 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
         $root->getProvides()->willReturn($data['provide']);
         $root->getSuggests()->willReturn($data['suggest']);
         $root->getExtra()->willReturn($data['extra'])->shouldBeCalled();
-        $root->setReferences(Argument::type('array'))->shouldBeCalled();
+        $root->getScripts()->willReturn($data['scripts']);
         $root->getAutoload()->willReturn($data['autoload']);
         $root->getDevAutoload()->willReturn($data['autoload-dev']);
         $root->getStabilityFlags()->willReturn([]);
         $root->getMinimumStability()->willReturn($data['minimum-stability']);
+
+        $root->setReferences(Argument::type('array'))->shouldBeCalled();
         $root->setStabilityFlags(Argument::type('array'))
             ->will(function ($args) use ($that) {
                 foreach ($args[0] as $key => $value) {

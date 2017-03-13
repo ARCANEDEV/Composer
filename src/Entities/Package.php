@@ -26,6 +26,7 @@ class Package
         PackageTraits\LinksTrait,
         PackageTraits\SuggestsTrait,
         PackageTraits\ExtraTrait,
+        PackageTraits\ScriptsTrait,
         PackageTraits\DevTrait,
         PackageTraits\ReferencesTrait;
 
@@ -170,11 +171,11 @@ class Package
         $this->mergePackageLinks('provide',  $root);
         $this->mergeSuggests($root);
         $this->mergeExtra($root, $state);
+        $this->mergeScripts($root, $state);
 
-        if ($state->isDevMode())
-            $this->mergeDevInto($root, $state);
-        else
-            $this->mergeReferences($root);
+        $state->isDevMode()
+            ? $this->mergeDevInto($root, $state)
+            : $this->mergeReferences($root);
     }
 
     /* ------------------------------------------------------------------------------------------------

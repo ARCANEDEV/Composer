@@ -56,6 +56,13 @@ class PluginState
     protected $mergeExtra = false;
 
     /**
+     * Whether to merge the scripts section.
+     *
+     * @var bool $mergeScripts
+     */
+    protected $mergeScripts = false;
+
+    /**
      * Whether to merge the extra section in a deep / recursive way.
      *
      * By default the extra section is merged with array_merge() and duplicate keys are ignored.
@@ -343,6 +350,16 @@ class PluginState
         return $this->mergeExtraDeep;
     }
 
+    /**
+     * Should the scripts section be merged?
+     *
+     * @return bool
+     */
+    public function shouldMergeScripts()
+    {
+        return $this->mergeScripts;
+    }
+
     /* ------------------------------------------------------------------------------------------------
      |  Main Functions
      | ------------------------------------------------------------------------------------------------
@@ -352,15 +369,16 @@ class PluginState
      */
     public function loadSettings()
     {
-        $extra                     = $this->composer->getPackage()->getExtra();
-        $config                    = $this->mergeConfig($extra);
-        $this->includes            = is_array($config['include']) ? $config['include'] : [$config['include']];
-        $this->requires            = is_array($config['require']) ? $config['require'] : [$config['require']];
-        $this->recurse             = (bool) $config['recurse'];
-        $this->replace             = (bool) $config['replace'];
-        $this->mergeDev            = (bool) $config['merge-dev'];
-        $this->mergeExtra          = (bool) $config['merge-extra'];
-        $this->mergeExtraDeep      = (bool) $config['merge-extra-deep'];
+        $extra                = $this->composer->getPackage()->getExtra();
+        $config               = $this->mergeConfig($extra);
+        $this->includes       = is_array($config['include']) ? $config['include'] : [$config['include']];
+        $this->requires       = is_array($config['require']) ? $config['require'] : [$config['require']];
+        $this->recurse        = (bool) $config['recurse'];
+        $this->replace        = (bool) $config['replace'];
+        $this->mergeDev       = (bool) $config['merge-dev'];
+        $this->mergeExtra     = (bool) $config['merge-extra'];
+        $this->mergeExtraDeep = (bool) $config['merge-extra-deep'];
+        $this->mergeScripts   = (bool) $config['merge-scripts'];
 
     }
 
@@ -387,6 +405,7 @@ class PluginState
                 'merge-dev'            => true,
                 'merge-extra'          => false,
                 'merge-extra-deep'     => false,
+                'merge-scripts'        => false,
             ],
             isset($extra['merge-plugin']) ? $extra['merge-plugin'] : []
         );

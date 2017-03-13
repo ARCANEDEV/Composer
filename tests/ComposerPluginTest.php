@@ -1045,6 +1045,115 @@ class ComposerPluginTest extends TestCase
         $this->assertEquals(0, count($extraInstalls));
     }
 
+    /**
+     * @test
+     *
+     * Given a root package with an scripts section
+     *   and a composer.local.json with an extra section with no conflicting keys
+     * When the plugin is run
+     * Then the root package scripts section should be extended with content from the local config.
+     *
+     * @param  bool  $fireInit Fire the INIT event?
+     *
+     * @dataProvider provideFireInit
+     */
+    public function it_can_merge_scripts($fireInit)
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('merge-scripts');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setScripts(Argument::type('array'))->will(function ($args) use ($that) {
+            $scripts = $args[0];
+            $that->assertCount(2, $scripts);
+            $that->assertArrayHasKey('example-script', $scripts);
+            $that->assertCount(2, $scripts['example-script']);
+            $that->assertArrayHasKey('example-script2', $scripts);
+        })->shouldBeCalled();
+
+        $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
+        $root->getSuggests()->shouldNotBeCalled();
+
+        $scriptsInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
+
+        $this->assertCount(0, $scriptsInstalls);
+    }
+
+    /**
+     * @test
+     *
+     * Given a root package with an scripts section
+     *   and a composer.local.json with an extra section with a conflicting key
+     * When the plugin is run
+     * Then the version in the root package should win.
+     */
+    public function it_can_merge_scripts_conflict()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('merge-scripts-conflict');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setScripts(Argument::type('array'))->will(function ($args) use ($that) {
+            $scripts = $args[0];
+            $that->assertCount(3, $scripts);
+            $that->assertArrayHasKey('example-script2', $scripts);
+            $that->assertArrayHasKey('example-script3', $scripts);
+            $that->assertSame("echo 'goodbye world'", $scripts['example-script2']);
+            $that->assertCount(1, $scripts['example-script3']);
+            $that->assertSame("echo 'adios world'", $scripts['example-script3'][0]);
+        })->shouldBeCalled();
+
+        $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
+        $root->getSuggests()->shouldNotBeCalled();
+
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+
+        $this->assertCount(0, $extraInstalls);
+    }
+
+    /**
+     * @test
+     *
+     * Given a root package with a scripts section
+     *   and replace mode is active
+     *   and a composer.local.json with a scripts section with a conflicting key
+     * When the plugin is run
+     * Then the version in the composer.local.json package should win.
+     */
+    public function it_can_merge_scripts_conflict_replace()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('merge-scripts-conflict-replace');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setScripts(Argument::type('array'))->will(function ($args) use ($that) {
+            $scripts = $args[0];
+            $that->assertCount(3, $scripts);
+            $that->assertArrayHasKey('example-script', $scripts);
+            $that->assertArrayHasKey('example-script2', $scripts);
+            $that->assertCount(1, $scripts['example-script2']);
+            $that->assertSame("echo 'hello world'", $scripts['example-script2'][0]);
+            $that->assertCount(1, $scripts['example-script3']);
+            $that->assertSame("echo 'hola world'", $scripts['example-script3'][0]);
+        })->shouldBeCalled();
+
+        $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
+        $root->getSuggests()->shouldNotBeCalled();
+
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+
+        $this->assertCount(0, $extraInstalls);
+    }
+
     /* ------------------------------------------------------------------------------------------------
      |  Other Functions
      | ------------------------------------------------------------------------------------------------
