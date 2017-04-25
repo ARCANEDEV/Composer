@@ -35,6 +35,9 @@ class PluginState
     /** @var bool */
     protected $replace = false;
 
+    /** @var bool $ignore */
+    protected $ignore = false;
+
     /**
      * Whether to merge the -dev sections.
      *
@@ -309,9 +312,7 @@ class PluginState
      */
     public function getDuplicateLinks($type)
     {
-        return isset($this->duplicateLinks[$type])
-            ? $this->duplicateLinks[$type]
-            : [];
+        return isset($this->duplicateLinks[$type]) ? $this->duplicateLinks[$type] : [];
     }
 
     /**
@@ -322,6 +323,16 @@ class PluginState
     public function replaceDuplicateLinks()
     {
         return $this->replace;
+    }
+
+    /**
+     * Should duplicate links be ignored?
+     *
+     * @return bool
+     */
+    public function ignoreDuplicateLinks()
+    {
+        return $this->ignore;
     }
 
     /**
@@ -375,11 +386,11 @@ class PluginState
         $this->requires       = is_array($config['require']) ? $config['require'] : [$config['require']];
         $this->recurse        = (bool) $config['recurse'];
         $this->replace        = (bool) $config['replace'];
+        $this->ignore         = (bool) $config['ignore-duplicates'];
         $this->mergeDev       = (bool) $config['merge-dev'];
         $this->mergeExtra     = (bool) $config['merge-extra'];
         $this->mergeExtraDeep = (bool) $config['merge-extra-deep'];
         $this->mergeScripts   = (bool) $config['merge-scripts'];
-
     }
 
     /* ------------------------------------------------------------------------------------------------
@@ -401,6 +412,7 @@ class PluginState
                 'require'              => [],
                 'recurse'              => true,
                 'replace'              => false,
+                'ignore-duplicates'    => false,
                 'prepend-repositories' => false,
                 'merge-dev'            => true,
                 'merge-extra'          => false,
