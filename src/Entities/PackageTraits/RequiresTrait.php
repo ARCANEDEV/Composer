@@ -39,10 +39,7 @@ trait RequiresTrait
             );
 
             $root->setRequires($this->mergeLinks(
-                $root->getRequires(),
-                $requires,
-                $state->replaceDuplicateLinks(),
-                $duplicateLinks
+                $root->getRequires(), $requires, $state, $duplicateLinks
             ));
 
             $state->addDuplicateLinks('require', $duplicateLinks);
@@ -66,10 +63,7 @@ trait RequiresTrait
             );
 
             $root->setDevRequires($this->mergeLinks(
-                $root->getDevRequires(),
-                $requires,
-                $state->replaceDuplicateLinks(),
-                $duplicateLinks
+                $root->getDevRequires(), $requires, $state, $duplicateLinks
             ));
 
             $state->addDuplicateLinks('require-dev', $duplicateLinks);
@@ -102,17 +96,25 @@ trait RequiresTrait
     /**
      * Merge two collections of package links and collect duplicates for subsequent processing.
      *
-     * @param  \Composer\Package\Link[]  $origin          Primary collection
-     * @param  array                     $merge           Additional collection
-     * @param  bool                      $replace         Replace existing links ?
-     * @param  array                     $duplicateLinks  Duplicate storage
+     * @param  \Composer\Package\Link[]                  $origin          Primary collection
+     * @param  array                                     $merge           Additional collection
+     * @param  \Arcanedev\Composer\Entities\PluginState  $state           Plugin state
+     * @param  array                                     $duplicateLinks  Duplicate storage
      *
      * @return \Composer\Package\Link[]                   Merged collection
      */
-    private function mergeLinks(array $origin, array $merge, $replace, array &$duplicateLinks)
+    private function mergeLinks(array $origin, array $merge, PluginState $state, array &$duplicateLinks)
     {
+        if ($state->ignoreDuplicateLinks() && $state->replaceDuplicateLinks()) {
+            $this->getLogger()->warning('Both replace and ignore-duplicates are true. These are mutually exclusive.');
+            $this->getLogger()->warning('Duplicate packages will be ignored.');
+        }
+
         foreach ($merge as $name => $link) {
-            if ( ! isset($origin[$name]) || $replace) {
+            if (isset($origin[$name]) && $state->ignoreDuplicateLinks()) {
+                $this->getLogger()->info("Ignoring duplicate <comment>{$name}</comment>");
+            }
+            elseif ( ! isset($origin[$name]) || $state->replaceDuplicateLinks()) {
                 $this->getLogger()->info("Merging <comment>{$name}</comment>");
                 $origin[$name] = $link;
             }

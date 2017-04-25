@@ -210,6 +210,77 @@ class ComposerPluginTest extends TestCase
         $this->assertEquals(0, count($extraInstalls));
     }
 
+    /**
+     * @test
+     *
+     * Given a root package with requires
+     *   and a composer.local.json with requires
+     *   and the same package is listed in multiple files
+     *   and "ignore-duplicates" is true
+     * When the plugin is run
+     * Then the root package should win.
+     */
+    public function it_can_merge_with_ignore()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('merge-with-ignore');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setRequires(Argument::type('array'))
+             ->will(function ($args) use ($that) {
+                 $requires = $args[0];
+                 $that->assertEquals(2, count($requires));
+                 $that->assertArrayHasKey('monolog/monolog', $requires);
+                 $that->assertEquals('~1.0', $requires['monolog/monolog']->getPrettyConstraint());
+             });
+
+        $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
+        $root->getSuggests()->shouldNotBeCalled();
+
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+
+        $this->assertEquals(0, count($extraInstalls));
+    }
+
+    /**
+     * @test
+     *
+     * Given a root package with requires
+     *   and a composer.local.json with requires
+     *   and the same package is listed in multiple files
+     *   and "ignore-duplicates" is true
+     *   and "replace" is true
+     * When the plugin is run
+     * Then the root package should win.
+     */
+    public function it_can_merge_with_ignore_and_replace()
+    {
+        $that = $this;
+        $dir  = $this->fixtureDir('merge-with-ignore-and-replace');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->setRequires(Argument::type('array'))
+             ->will(function ($args) use ($that) {
+                 $requires = $args[0];
+                 $that->assertEquals(2, count($requires));
+                 $that->assertArrayHasKey('monolog/monolog', $requires);
+                 $that->assertEquals('~1.0', $requires['monolog/monolog']->getPrettyConstraint());
+             });
+
+        $root->getRepositories()->shouldNotBeCalled();
+        $root->getConflicts()->shouldNotBeCalled();
+        $root->getReplaces()->shouldNotBeCalled();
+        $root->getProvides()->shouldNotBeCalled();
+        $root->getSuggests()->shouldNotBeCalled();
+
+        $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
+
+        $this->assertEquals(0, count($extraInstalls));
+    }
+
     /** @test */
     public function it_can_recursive_includes()
     {
