@@ -11,24 +11,26 @@ use Arcanedev\Composer\Tests\TestCase;
  */
 class PluginStateTest extends TestCase
 {
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Properties
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /** @var \Arcanedev\Composer\Entities\PluginState */
     private $pState;
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Main Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Main Methods
+     | -----------------------------------------------------------------
      */
+
     public function setUp()
     {
         parent::setUp();
 
-        /** @var \Composer\Composer $composer */
-        $composer     = $this->prophesize('Composer\Composer')->reveal();
-        $this->pState = new PluginState($composer);
+        $this->pState = new PluginState(
+            $this->prophesize('Composer\Composer')->reveal()
+        );
     }
 
     public function tearDown()
@@ -38,39 +40,40 @@ class PluginStateTest extends TestCase
         parent::tearDown();
     }
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Test Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Tests
+     | -----------------------------------------------------------------
      */
+
     /** @test */
     public function it_can_state_locked()
     {
-        $this->assertFalse($this->pState->isLocked());
-        $this->assertTrue($this->pState->forceUpdate());
+        static::assertFalse($this->pState->isLocked());
+        static::assertTrue($this->pState->forceUpdate());
 
         $this->pState->setLocked(true);
 
-        $this->assertTrue($this->pState->isLocked());
-        $this->assertFalse($this->pState->forceUpdate());
+        static::assertTrue($this->pState->isLocked());
+        static::assertFalse($this->pState->forceUpdate());
     }
 
     /** @test */
     public function it_can_state_dump_autoloader()
     {
-        $this->assertFalse($this->pState->shouldDumpAutoloader());
+        static::assertFalse($this->pState->shouldDumpAutoloader());
 
         $this->pState->setDumpAutoloader(true);
 
-        $this->assertTrue($this->pState->shouldDumpAutoloader());
+        static::assertTrue($this->pState->shouldDumpAutoloader());
     }
 
     /** @test */
     public function it_can_state_optimize_autoloader()
     {
-        $this->assertFalse($this->pState->shouldOptimizeAutoloader());
+        static::assertFalse($this->pState->shouldOptimizeAutoloader());
 
         $this->pState->setOptimizeAutoloader(true);
 
-        $this->assertTrue($this->pState->shouldOptimizeAutoloader());
+        static::assertTrue($this->pState->shouldOptimizeAutoloader());
     }
 }

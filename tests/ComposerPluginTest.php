@@ -22,10 +22,11 @@ use ReflectionProperty;
  */
 class ComposerPluginTest extends TestCase
 {
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Properties
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /** @var \Composer\Composer */
     protected $composer;
 
@@ -35,16 +36,17 @@ class ComposerPluginTest extends TestCase
     /** @var \Arcanedev\Composer\ComposerPlugin */
     protected $plugin;
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Main Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Main Methods
+     | -----------------------------------------------------------------
      */
+
     public function setUp()
     {
         parent::setUp();
 
-        $this->composer = $this->prophesize('Composer\\Composer');
-        $this->io       = $this->prophesize('Composer\\IO\\IOInterface');
+        $this->composer = $this->prophesize(\Composer\Composer::class);
+        $this->io       = $this->prophesize(\Composer\IO\IOInterface::class);
         $this->plugin   = new ComposerPlugin;
 
         $this->plugin->activate(
@@ -60,10 +62,11 @@ class ComposerPluginTest extends TestCase
         parent::tearDown();
     }
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Test Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Tests
+     | -----------------------------------------------------------------
      */
+
     /** @test */
     public function it_can_get_subscribed_events()
     {
@@ -79,36 +82,19 @@ class ComposerPluginTest extends TestCase
             ScriptEvents::POST_UPDATE_CMD,
         ];
 
-        $this->assertCount(count($events), $subscriptions);
+        static::assertCount(count($events), $subscriptions);
 
 
         foreach ($events as $event) {
-            $this->assertArrayHasKey($event, $subscriptions);
+            static::assertArrayHasKey($event, $subscriptions);
         }
-    }
-
-    /**
-     * @test
-     *
-     * @expectedException         \Arcanedev\Composer\Exceptions\MissingFileException
-     * @expectedExceptionMessage  merge-plugin: No files matched required 'glob/*.json'
-     */
-    public function it_must_throw_missing_file_exception_on_require()
-    {
-        $dir  = $this->fixtureDir('missing-file-exception-on-require');
-        $root = $this->rootFromJson("{$dir}/composer.json");
-
-        $root->getRequires()->shouldNotBeCalled();
-        $root->getDevRequires()->shouldNotBeCalled();
-        $root->setReferences(Argument::type('array'))->shouldNotBeCalled();
-        $this->triggerPlugin($root->reveal(), $dir);
     }
 
     /** @test */
     public function it_can_require()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('require');
+        $dir  = static::fixtureDir('require');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
@@ -120,14 +106,14 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /** @test */
     public function it_can_one_merge_no_conflicts()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('one-merge-no-conflicts');
+        $dir  = static::fixtureDir('one-merge-no-conflicts');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
@@ -173,7 +159,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /**
@@ -189,7 +175,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_with_replace()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-with-replace');
+        $dir  = static::fixtureDir('merge-with-replace');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
@@ -207,7 +193,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /**
@@ -223,7 +209,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_with_ignore()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-with-ignore');
+        $dir  = static::fixtureDir('merge-with-ignore');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))
@@ -242,7 +228,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /**
@@ -259,7 +245,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_with_ignore_and_replace()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-with-ignore-and-replace');
+        $dir  = static::fixtureDir('merge-with-ignore-and-replace');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))
@@ -278,13 +264,13 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /** @test */
     public function it_can_recursive_includes()
     {
-        $dir      = $this->fixtureDir('recursive-includes');
+        $dir      = static::fixtureDir('recursive-includes');
         $root     = $this->rootFromJson("{$dir}/composer.json");
         $packages = [];
 
@@ -300,15 +286,15 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertArrayHasKey('foo', $packages);
-        $this->assertArrayHasKey('monolog/monolog', $packages);
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertArrayHasKey('foo', $packages);
+        static::assertArrayHasKey('monolog/monolog', $packages);
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /** @test */
     public function it_can_recursive_includes_disabled()
     {
-        $dir        = $this->fixtureDir('recursive-includes-disabled');
+        $dir        = static::fixtureDir('recursive-includes-disabled');
         $root       = $this->rootFromJson("{$dir}/composer.json");
         $packages   = [];
 
@@ -324,9 +310,9 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertArrayHasKey('foo', $packages);
-        $this->assertArrayNotHasKey('monolog/monolog', $packages);
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertArrayHasKey('foo', $packages);
+        static::assertArrayNotHasKey('monolog/monolog', $packages);
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /**
@@ -339,7 +325,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_one_merge_with_conflicts($fireInit)
     {
         $that   = $this;
-        $dir    = $this->fixtureDir('one-merge-with-conflicts');
+        $dir    = static::fixtureDir('one-merge-with-conflicts');
         $root   = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
@@ -366,9 +352,9 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
 
-        $this->assertCount(2,                  $extraInstalls);
-        $this->assertEquals('monolog/monolog', $extraInstalls[0][0]);
-        $this->assertEquals('foo',             $extraInstalls[1][0]);
+        static::assertCount(2,                  $extraInstalls);
+        static::assertEquals('monolog/monolog', $extraInstalls[0][0]);
+        static::assertEquals('foo',             $extraInstalls[1][0]);
     }
 
     /** @test */
@@ -376,8 +362,8 @@ class ComposerPluginTest extends TestCase
     {
         $that        = $this;
         $io          = $this->io;
-        $dir         = $this->fixtureDir('merged-repositories');
-        $repoManager = $this->prophesize('Composer\\Repository\\RepositoryManager');
+        $dir         = static::fixtureDir('merged-repositories');
+        $repoManager = $this->prophesize(\Composer\Repository\RepositoryManager::class);
 
         $repoManager
             ->createRepository(Argument::type('string'), Argument::type('array'))
@@ -396,7 +382,7 @@ class ComposerPluginTest extends TestCase
             });
 
         $repoManager->prependRepository(Argument::any())->will(function ($args) use ($that) {
-            $that->assertInstanceOf('Composer\Repository\VcsRepository', $args[0]);
+            $that->assertInstanceOf(\Composer\Repository\VcsRepository::class, $args[0]);
         });
 
         $this->composer->getRepositoryManager()->will(function () use ($repoManager) {
@@ -424,7 +410,8 @@ class ComposerPluginTest extends TestCase
         $root->getSuggests()->shouldNotBeCalled();
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
-        $this->assertEquals(0, count($extraInstalls));
+
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /**
@@ -437,7 +424,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_update_stability_flags($fireInit)
     {
         $that = $this;
-        $dir  = $this->fixtureDir('update-stability-flags');
+        $dir  = static::fixtureDir('update-stability-flags');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))->will(function ($args) use ($that) {
@@ -476,7 +463,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
 
-        $this->assertCount(0, $extraInstalls);
+        static::assertCount(0, $extraInstalls);
     }
 
     /**
@@ -493,7 +480,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_stability_flags_respects_minimum_stability()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-stability-flags-respects-minimum-stability');
+        $dir  = static::fixtureDir('merge-stability-flags-respects-minimum-stability');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         // The root package declares a stable package
@@ -524,7 +511,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merged_autoload()
     {
         $that   = $this;
-        $dir    = $this->fixtureDir('merged-autoload');
+        $dir    = static::fixtureDir('merged-autoload');
         $root   = $this->rootFromJson("{$dir}/composer.json");
 
         $autoload = [];
@@ -555,8 +542,8 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertEquals(0, count($extraInstalls));
-        $this->assertEquals([
+        static::assertEquals(0, count($extraInstalls));
+        static::assertEquals([
             'psr-4'     => [
                 'Arcanedev\\'           => 'src/',
                 'Arcanedev\\Package\\'  => [
@@ -595,7 +582,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_extra($fireInit)
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-extra');
+        $dir  = static::fixtureDir('merge-extra');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setExtra(Argument::type('array'))->will(function ($args) use ($that) {
@@ -614,7 +601,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
 
-        $this->assertCount(0, $extraInstalls);
+        static::assertCount(0, $extraInstalls);
     }
 
     /**
@@ -628,7 +615,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_extra_with_conflict()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-extra-with-conflict');
+        $dir  = static::fixtureDir('merge-extra-with-conflict');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setExtra(Argument::type('array'))->will(function ($args) use ($that) {
@@ -647,7 +634,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /**
@@ -662,7 +649,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_extra_conflict_replace()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-extra-conflict-replace');
+        $dir  = static::fixtureDir('merge-extra-conflict-replace');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setExtra(Argument::type('array'))->will(function ($args) use ($that) {
@@ -682,7 +669,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /**
@@ -703,7 +690,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_extra_deep($suffix, $replace)
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-extra-deep' . $suffix);
+        $dir  = static::fixtureDir('merge-extra-deep' . $suffix);
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setExtra(Argument::type('array'))->will(function ($args) use ($that, $replace) {
@@ -746,7 +733,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertCount(0, $extraInstalls);
+        static::assertCount(0, $extraInstalls);
     }
 
     /**
@@ -762,11 +749,11 @@ class ComposerPluginTest extends TestCase
         $operation = new InstallOperation(
             new Package($package, '1.2.3.4', '1.2.3')
         );
-        $event = $this->prophesize('Composer\\Installer\\PackageEvent');
+        $event = $this->prophesize(\Composer\Installer\PackageEvent::class);
         $event->getOperation()->willReturn($operation)->shouldBeCalled();
 
         if ($first) {
-            $locker = $this->prophesize('Composer\\Package\\Locker');
+            $locker = $this->prophesize(\Composer\Package\Locker::class);
 
             $locker->isLocked()->willReturn($locked)->shouldBeCalled();
             $this->composer->getLocker()->willReturn($locker->reveal())->shouldBeCalled();
@@ -775,8 +762,8 @@ class ComposerPluginTest extends TestCase
 
         $this->plugin->onPostPackageInstall($event->reveal());
 
-        $this->assertEquals($first,  $this->getState()->isFirstInstall());
-        $this->assertEquals($locked, $this->getState()->isLocked());
+        static::assertEquals($first,  $this->getState()->isFirstInstall());
+        static::assertEquals($locked, $this->getState()->isLocked());
     }
 
     /**
@@ -788,7 +775,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_skip_merge_dev_if_false()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('skip-merge-dev-if-false');
+        $dir  = static::fixtureDir('skip-merge-dev-if-false');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))
@@ -805,7 +792,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertCount(0, $extraInstalls);
+        static::assertCount(0, $extraInstalls);
     }
 
     /**
@@ -823,16 +810,16 @@ class ComposerPluginTest extends TestCase
     {
         $that = $this;
         $io   = $this->io;
-        $dir  = $this->fixtureDir('has-branch-alias');
+        $dir  = static::fixtureDir('has-branch-alias');
         // RootAliasPackage was updated in 06c44ce to include more setters
         // that we take advantage of if available
         $withCompleteRootAlias = method_exists(
-            'Composer\Package\RootPackageInterface',
+            \Composer\Package\RootPackageInterface::class,
             'setRepositories'
         );
 
         /** @var mixed $repoManager */
-        $repoManager = $this->prophesize('Composer\Repository\RepositoryManager');
+        $repoManager = $this->prophesize(\Composer\Repository\RepositoryManager::class);
 
         $repoManager
             ->createRepository(Argument::type('string'), Argument::type('array'))
@@ -905,7 +892,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_correct_merge_order_of_specified_files_and_glob_files()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('correct-merge-order-of-specified-files-and-glob-files');
+        $dir  = static::fixtureDir('correct-merge-order-of-specified-files-and-glob-files');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $expects = [
@@ -936,7 +923,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_replace_link_with_self_version_as_constraint()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('replace-link-with-self-version-as-constraint');
+        $dir  = static::fixtureDir('replace-link-with-self-version-as-constraint');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setReplaces(Argument::type('array'))
@@ -967,7 +954,7 @@ class ComposerPluginTest extends TestCase
              });
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
-        $this->assertCount(0, $extraInstalls);
+        static::assertCount(0, $extraInstalls);
     }
 
     /**
@@ -980,7 +967,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_resolve_self_version_constraint_through_packages_from_the_root_package($fireInit)
     {
         $that = $this;
-        $dir  = $this->fixtureDir('resolve-self-version-constraint-through-packages-from-the-root-package');
+        $dir  = static::fixtureDir('resolve-self-version-constraint-through-packages-from-the-root-package');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setReplaces(Argument::type('array'))->will(function ($args) use ($that) {
@@ -991,9 +978,9 @@ class ComposerPluginTest extends TestCase
              $that->assertArrayHasKey('foo/baz',   $replace);
              $that->assertArrayHasKey('foo/xyzzy', $replace);
 
-             $that->assertInstanceOf('Composer\Package\Link', $replace['foo/bar']);
-             $that->assertInstanceOf('Composer\Package\Link', $replace['foo/baz']);
-             $that->assertInstanceOf('Composer\Package\Link', $replace['foo/xyzzy']);
+             $that->assertInstanceOf(\Composer\Package\Link::class, $replace['foo/bar']);
+             $that->assertInstanceOf(\Composer\Package\Link::class, $replace['foo/baz']);
+             $that->assertInstanceOf(\Composer\Package\Link::class, $replace['foo/xyzzy']);
 
              $that->assertEquals('~8.0', $replace['foo/bar']->getPrettyConstraint());
              $that->assertEquals('~8.0', $replace['foo/baz']->getPrettyConstraint());
@@ -1001,7 +988,7 @@ class ComposerPluginTest extends TestCase
         });
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
-        $this->assertCount(0, $extraInstalls);
+        static::assertCount(0, $extraInstalls);
     }
 
     /**
@@ -1014,7 +1001,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_resolve_version_constraint_with_revision($fireInit)
     {
         $that = $this;
-        $dir  = $this->fixtureDir('resolve-version-constraint-with-revision');
+        $dir  = static::fixtureDir('resolve-version-constraint-with-revision');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires(Argument::type('array'))->will(function ($args, $root) {
@@ -1074,7 +1061,7 @@ class ComposerPluginTest extends TestCase
     {
         $that        = $this;
         $io          = $this->io;
-        $repoManager = $this->prophesize('Composer\Repository\RepositoryManager');
+        $repoManager = $this->prophesize(\Composer\Repository\RepositoryManager::class);
 
         $repoManager->createRepository(Argument::type('string'), Argument::type('array'))
             ->will(function ($args) use ($that, $io) {
@@ -1092,7 +1079,7 @@ class ComposerPluginTest extends TestCase
             return $repoManager->reveal();
         });
 
-        $dir  = $this->fixtureDir('prepend-repositories');
+        $dir  = static::fixtureDir('prepend-repositories');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setRequires()->shouldNotBeCalled();
@@ -1102,7 +1089,7 @@ class ComposerPluginTest extends TestCase
             $repos = $args[0];
             $that->assertEquals(2, count($repos));
             $prependedRepo = $repos[0];
-            $that->assertInstanceOf('Composer\Repository\VcsRepository', $prependedRepo);
+            $that->assertInstanceOf(\Composer\Repository\VcsRepository::class, $prependedRepo);
             $that->assertAttributeEquals('https://github.com/ARCANEDEV/Composer.git', 'url', $prependedRepo);
         });
 
@@ -1113,7 +1100,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertEquals(0, count($extraInstalls));
+        static::assertEquals(0, count($extraInstalls));
     }
 
     /**
@@ -1131,7 +1118,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_scripts($fireInit)
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-scripts');
+        $dir  = static::fixtureDir('merge-scripts');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setScripts(Argument::type('array'))->will(function ($args) use ($that) {
@@ -1150,7 +1137,7 @@ class ComposerPluginTest extends TestCase
 
         $scriptsInstalls = $this->triggerPlugin($root->reveal(), $dir, $fireInit);
 
-        $this->assertCount(0, $scriptsInstalls);
+        static::assertCount(0, $scriptsInstalls);
     }
 
     /**
@@ -1164,7 +1151,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_scripts_conflict()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-scripts-conflict');
+        $dir  = static::fixtureDir('merge-scripts-conflict');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setScripts(Argument::type('array'))->will(function ($args) use ($that) {
@@ -1185,7 +1172,7 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertCount(0, $extraInstalls);
+        static::assertCount(0, $extraInstalls);
     }
 
     /**
@@ -1200,7 +1187,7 @@ class ComposerPluginTest extends TestCase
     public function it_can_merge_scripts_conflict_replace()
     {
         $that = $this;
-        $dir  = $this->fixtureDir('merge-scripts-conflict-replace');
+        $dir  = static::fixtureDir('merge-scripts-conflict-replace');
         $root = $this->rootFromJson("{$dir}/composer.json");
 
         $root->setScripts(Argument::type('array'))->will(function ($args) use ($that) {
@@ -1222,13 +1209,31 @@ class ComposerPluginTest extends TestCase
 
         $extraInstalls = $this->triggerPlugin($root->reveal(), $dir);
 
-        $this->assertCount(0, $extraInstalls);
+        static::assertCount(0, $extraInstalls);
     }
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Other Functions
-     | ------------------------------------------------------------------------------------------------
+    /**
+     * @test
+     *
+     * @expectedException         \Arcanedev\Composer\Exceptions\MissingFileException
+     * @expectedExceptionMessage  merge-plugin: No files matched required 'glob/*.json'
      */
+    public function it_must_throw_missing_file_exception_on_require()
+    {
+        $dir  = static::fixtureDir('missing-file-exception-on-require');
+        $root = $this->rootFromJson("{$dir}/composer.json");
+
+        $root->getRequires()->shouldNotBeCalled();
+        $root->getDevRequires()->shouldNotBeCalled();
+        $root->setReferences(Argument::type('array'))->shouldNotBeCalled();
+        $this->triggerPlugin($root->reveal(), $dir);
+    }
+
+    /* -----------------------------------------------------------------
+     |  Other Methods
+     | -----------------------------------------------------------------
+     */
+
     /**
      * @return PluginState
      */
@@ -1271,7 +1276,7 @@ class ComposerPluginTest extends TestCase
 
         $requestInstalls = [];
 
-        $request = $this->prophesize('Composer\\DependencyResolver\\Request');
+        $request = $this->prophesize(\Composer\DependencyResolver\Request::class);
         $request->install(Argument::any(), Argument::any())
             ->will(function ($args) use (&$requestInstalls) {
                 $requestInstalls[] = $args;
@@ -1282,9 +1287,9 @@ class ComposerPluginTest extends TestCase
             $this->composer->reveal(),
             $this->io->reveal(),
             true,
-            $this->prophesize('Composer\\DependencyResolver\\PolicyInterface')->reveal(),
-            $this->prophesize('Composer\\DependencyResolver\\Pool')->reveal(),
-            $this->prophesize('Composer\\Repository\\CompositeRepository')->reveal(),
+            $this->prophesize(\Composer\DependencyResolver\PolicyInterface::class)->reveal(),
+            $this->prophesize(\Composer\DependencyResolver\Pool::class)->reveal(),
+            $this->prophesize(\Composer\Repository\CompositeRepository::class)->reveal(),
             $request->reveal(),
             []
         ));

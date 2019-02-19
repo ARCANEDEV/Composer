@@ -29,10 +29,11 @@ use Composer\Script\ScriptEvents;
  */
 class ComposerPlugin implements PluginInterface, EventSubscriberInterface
 {
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Constants
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /**
      * Package name
      */
@@ -53,10 +54,11 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     const CALLBACK_PRIORITY = 50000;
 
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Properties
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /** @var \Composer\Composer */
     protected $composer;
 
@@ -80,10 +82,11 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
      */
     protected $loadedNoDev = [];
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Main Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Main Methods
+     | -----------------------------------------------------------------
      */
+
     /**
      * Apply plugin modifications to composer
      *
@@ -93,7 +96,7 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
     public function activate(Composer $composer, IOInterface $io)
     {
         $this->composer = $composer;
-        $this->state    = new PluginState($this->composer);
+        $this->state    = new PluginState($composer);
         $this->logger   = new Logger('merge-plugin', $io);
 }
 
@@ -341,10 +344,11 @@ class ComposerPlugin implements PluginInterface, EventSubscriberInterface
         $installer->run();
     }
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Check Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Check Methods
+     | -----------------------------------------------------------------
      */
+
     /**
      * Check the preferred install (source or dist).
      *

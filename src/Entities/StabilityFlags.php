@@ -11,10 +11,11 @@ use Composer\Package\Version\VersionParser;
  */
 class StabilityFlags
 {
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Properties
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /**
      * Current package name => stability mappings.
      *
@@ -29,10 +30,11 @@ class StabilityFlags
      */
     protected $minimumStability;
 
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Constructor
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /**
      * Make StabilityFlags instance.
      *
@@ -62,9 +64,7 @@ class StabilityFlags
     {
         $name = VersionParser::normalizeStability($name);
 
-        return isset(BasePackage::$stabilities[$name]) ?
-            BasePackage::$stabilities[$name] :
-            BasePackage::STABILITY_STABLE;
+        return BasePackage::$stabilities[$name] ?? BasePackage::STABILITY_STABLE;
     }
 
     /**
@@ -79,10 +79,11 @@ class StabilityFlags
         return '/^[^@]*?@(' . implode('|', array_keys($stabilities)) . ')$/i';
     }
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Main Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Main Methods
+     | -----------------------------------------------------------------
      */
+
     /**
      * Make StabilityFlags and extract stability flags.
      *
@@ -94,7 +95,7 @@ class StabilityFlags
      */
     public static function extract(array $flags, $minimumStability, array $requires)
     {
-        return (new self($flags, $minimumStability))->extractAll($requires);
+        return (new static($flags, $minimumStability))->extractAll($requires);
     }
 
     /**
@@ -122,6 +123,35 @@ class StabilityFlags
         });
     }
 
+    /* -----------------------------------------------------------------
+     |  Other Methods
+     | -----------------------------------------------------------------
+     */
+
+    /**
+     * Extract the most unstable explicit stability (eg '@dev') from a version specification.
+     *
+     * @param  string  $version
+     *
+     * @return int|null
+     */
+    protected function getExplicitStability($version)
+    {
+        $found   = null;
+        $pattern = $this->getPattern();
+
+        foreach (static::splitConstraints($version) as $constraint) {
+            if ( ! preg_match($pattern, $constraint, $match)) {
+                continue;
+            }
+
+            $stability = $this->getStabilityInteger($match[1]);
+            $found     = max($stability, $found);
+        }
+
+        return $found;
+    }
+
     /**
      * Extract stability.
      *
@@ -141,27 +171,15 @@ class StabilityFlags
     }
 
     /**
-     * Extract the most unstable explicit stability (eg '@dev') from a version specification.
+     * Get the current stability of a given package.
      *
-     * @param  string  $version
+     * @param  string  $name
      *
      * @return int|null
      */
-    protected function getExplicitStability($version)
+    protected function getCurrentStability($name)
     {
-        $found   = null;
-        $pattern = $this->getPattern();
-
-        foreach ($this->splitConstraints($version) as $constraint) {
-            if ( ! preg_match($pattern, $constraint, $match)) {
-                continue;
-            }
-
-            $stability = $this->getStabilityInteger($match[1]);
-            $found     = max($stability, $found);
-        }
-
-        return $found;
+        return $this->flags[$name] ?? null;
     }
 
     /**
@@ -186,29 +204,13 @@ class StabilityFlags
     }
 
     /**
-     * Get the current stability of a given package.
-     *
-     * @param  string  $name
-     *
-     * @return int|null
-     */
-    protected function getCurrentStability($name)
-    {
-        return isset($this->flags[$name]) ? $this->flags[$name] : null;
-    }
-
-    /* ------------------------------------------------------------------------------------------------
-     |  Other Functions
-     | ------------------------------------------------------------------------------------------------
-     */
-    /**
      * Split a version specification into a list of version constraints.
      *
      * @param  string  $version
      *
      * @return array
      */
-    protected function splitConstraints($version)
+    protected static function splitConstraints($version)
     {
         $found   = [];
         $pattern = '/(?<!^|as|[=>< ,]) *(?<!-)[, ](?!-) *(?!,|as|$)/';
