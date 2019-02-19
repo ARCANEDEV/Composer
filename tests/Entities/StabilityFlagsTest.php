@@ -13,10 +13,11 @@ use Composer\Package\Link;
  */
 class StabilityFlagsTest extends TestCase
 {
-    /* ------------------------------------------------------------------------------------------------
-     |  Test Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Tests
+     | -----------------------------------------------------------------
      */
+
     /**
      * @test
      *
@@ -25,7 +26,7 @@ class StabilityFlagsTest extends TestCase
      * @param  string  $version
      * @param  string  $expect
      */
-    public function testExplicitStability($version, $expect)
+    public function it_can_extract_explicit_stability($version, $expect)
     {
         $fixture = new StabilityFlags;
         $got     = $fixture->extractAll([
@@ -33,7 +34,7 @@ class StabilityFlagsTest extends TestCase
         ]);
 
         if (isset($got['test'])) {
-            $this->assertEquals($expect, $got['test']);
+            static::assertEquals($expect, $got['test']);
         }
     }
 
@@ -66,7 +67,7 @@ class StabilityFlagsTest extends TestCase
 
 
     /** @test */
-    public function testLowestWins()
+    public function it_can_extract_lowest_wins()
     {
         $fixture = new StabilityFlags([
             'test' => BasePackage::STABILITY_ALPHA,
@@ -76,19 +77,20 @@ class StabilityFlagsTest extends TestCase
             'test' => $this->makeLink('@rc')->reveal(),
         ]);
 
-        $this->assertEquals(BasePackage::STABILITY_ALPHA, $got['test']);
+        static::assertEquals(BasePackage::STABILITY_ALPHA, $got['test']);
     }
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Other Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Other Methods
+     | -----------------------------------------------------------------
      */
+
     /**
      * Mock Link.
      *
      * @param  string  $version
      *
-     * @return Link
+     * @return \Composer\Package\Link
      */
     protected function makeLink($version)
     {

@@ -8,7 +8,6 @@
  */
 class NestedArray
 {
-
     /**
      * Merges multiple arrays, recursively, and returns the merged array.
      *
@@ -16,13 +15,15 @@ class NestedArray
      * When merging values that are not both arrays, the latter value replaces the former rather than merging with it.
      *
      *
+     * @param  array  $arrays
+     *
      * @return array
      *
      * @see NestedArray::mergeDeepArray()
      */
-    public static function mergeDeep()
+    public static function mergeDeep(...$arrays)
     {
-        return self::mergeDeepArray(func_get_args());
+        return self::mergeDeepArray($arrays);
     }
 
     /**
@@ -51,7 +52,7 @@ class NestedArray
                 }
                 elseif (isset($result[$key]) && is_array($result[$key]) && is_array($value)) {
                     // Recurse when both values are arrays.
-                    $result[$key] = self::mergeDeepArray(array($result[$key], $value), $preserveIntegerKeys);
+                    $result[$key] = self::mergeDeepArray([$result[$key], $value], $preserveIntegerKeys);
                 }
                 else {
                     // Otherwise, use the latter value, overriding any previous value.

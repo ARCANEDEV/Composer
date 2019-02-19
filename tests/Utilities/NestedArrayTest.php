@@ -11,10 +11,11 @@ use Arcanedev\Composer\Utilities\NestedArray;
  */
 class NestedArrayTest extends TestCase
 {
-    /* ------------------------------------------------------------------------------------------------
-     |  Test Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Tests
+     | -----------------------------------------------------------------
      */
+
     /** @test */
     public function it_can_merge_deep_array()
     {
@@ -39,14 +40,14 @@ class NestedArrayTest extends TestCase
             'absolute'   => true,
         ];
 
-        $this->assertSame(
+        static::assertSame(
             $expected,
             NestedArray::mergeDeepArray([$arrayOne, $arrayTwo]),
             'NestedArray::mergeDeepArray() returned a properly merged array.'
         );
 
         // Test wrapper function, NestedArray::mergeDeep().
-        $this->assertSame(
+        static::assertSame(
             $expected,
             NestedArray::mergeDeep($arrayOne, $arrayTwo),
             'NestedArray::mergeDeep() returned a properly merged array.'
@@ -63,7 +64,7 @@ class NestedArrayTest extends TestCase
             'subkey' => ['X'],
         ];
 
-        $this->assertSame(
+        static::assertSame(
             [
                 'subkey' => ['X', 'Y', 'X'], // Drupal core behavior.
             ],
@@ -89,7 +90,7 @@ class NestedArrayTest extends TestCase
             ],
         ];
 
-        $this->assertSame(
+        static::assertSame(
             [
                 // Drupal core behavior.
                 'subkey' => [
@@ -121,7 +122,7 @@ class NestedArrayTest extends TestCase
             ],
         ];
 
-        $this->assertSame(
+        static::assertSame(
             [
                 // Drupal core behavior.
                 'subkey' => [

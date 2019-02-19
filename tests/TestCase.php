@@ -3,7 +3,7 @@
 use Composer\Package\BasePackage;
 use Composer\Package\Link;
 use Composer\Package\Version\VersionParser;
-use PHPUnit_Framework_TestCase;
+use PHPUnit\Framework\TestCase as BaseTestCase;
 use Prophecy\Argument;
 use Prophecy\Prophecy\ObjectProphecy;
 
@@ -13,12 +13,13 @@ use Prophecy\Prophecy\ObjectProphecy;
  * @package  Arcanedev\Composer\Tests
  * @author   ARCANEDEV <arcanedev.maroc@gmail.com>
  */
-abstract class TestCase extends PHPUnit_Framework_TestCase
+abstract class TestCase extends BaseTestCase
 {
-    /* ------------------------------------------------------------------------------------------------
-     |  Common Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Common Methods
+     | -----------------------------------------------------------------
      */
+
     /**
      * Get fixture directory
      *
@@ -26,9 +27,9 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
      *
      * @return string
      */
-    protected function fixtureDir($directory)
+    protected static function fixtureDir($directory)
     {
-        return __DIR__ . "/fixtures/{$directory}";
+        return __DIR__."/fixtures/{$directory}";
     }
 
     /**
@@ -40,25 +41,22 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
     {
         $that = $this;
         $json = json_decode(file_get_contents($file), true);
-        $data = array_merge(
-            [
-                'name'              => '__root__',
-                'version'           => '1.0.0',
-                'repositories'      => [],
-                'require'           => [],
-                'require-dev'       => [],
-                'conflict'          => [],
-                'replace'           => [],
-                'provide'           => [],
-                'suggest'           => [],
-                'extra'             => [],
-                'scripts'           => [],
-                'autoload'          => [],
-                'autoload-dev'      => [],
-                'minimum-stability' => 'stable',
-            ],
-            $json
-        );
+        $data = array_merge([
+            'name'              => '__root__',
+            'version'           => '1.0.0',
+            'repositories'      => [],
+            'require'           => [],
+            'require-dev'       => [],
+            'conflict'          => [],
+            'replace'           => [],
+            'provide'           => [],
+            'suggest'           => [],
+            'extra'             => [],
+            'scripts'           => [],
+            'autoload'          => [],
+            'autoload-dev'      => [],
+            'minimum-stability' => 'stable',
+        ], $json);
 
         // Convert packages to proper links
         $vp = new VersionParser;
@@ -77,7 +75,7 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
         }
 
         /** @var mixed $root */
-        $root = $this->prophesize('Composer\\Package\\RootPackage');
+        $root = $this->prophesize(\Composer\Package\RootPackage::class);
         $root->getVersion()->willReturn($vp->normalize($data['version']));
         $root->getPrettyVersion()->willReturn($data['version']);
         $root->getRequires()->willReturn($data['require'])->shouldBeCalled();
@@ -116,7 +114,7 @@ abstract class TestCase extends PHPUnit_Framework_TestCase
     protected function makeAliasFor($root)
     {
         /** @var mixed $alias */
-        $alias = $this->prophesize('Composer\Package\RootAliasPackage');
+        $alias = $this->prophesize(\Composer\Package\RootAliasPackage::class);
 
         $alias->getAliasOf()->willReturn($root);
 

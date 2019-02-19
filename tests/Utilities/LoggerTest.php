@@ -12,22 +12,24 @@ use Prophecy\Argument;
  */
 class LoggerTest extends TestCase
 {
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Properties
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /** @var \Composer\IO\IOInterface */
     private $io;
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Main Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Main Methods
+     | -----------------------------------------------------------------
      */
+
     public function setUp()
     {
         parent::setUp();
 
-        $this->io = $this->prophesize('Composer\IO\IOInterface');
+        $this->io = $this->prophesize(\Composer\IO\IOInterface::class);
 
         $this->io->write(Argument::type('string'))->shouldNotBeCalled();
     }
@@ -47,6 +49,7 @@ class LoggerTest extends TestCase
     public function it_can_run_on_very_verbose_debug()
     {
         $output = [];
+
         $this->io->isVeryVerbose()->willReturn(true)->shouldBeCalled();
         $this->io->writeError(Argument::type('string'))->will(function ($args) use (&$output) {
             $output[] = $args[0];
@@ -54,8 +57,9 @@ class LoggerTest extends TestCase
 
         $logger = new Logger('test', $this->io->reveal());
         $logger->debug('foo');
-        $this->assertEquals(1, count($output));
-        $this->assertContains('<info>[test]</info>', $output[0]);
+
+        static::assertEquals(1, count($output));
+        static::assertContains('<info>[test]</info>', $output[0]);
     }
 
     /** @test */
@@ -72,7 +76,7 @@ class LoggerTest extends TestCase
     public function it_can_run_on_verbose_info()
     {
         $output = [];
-        $io     = $this->prophesize('Composer\IO\IOInterface');
+        $io     = $this->prophesize(\Composer\IO\IOInterface::class);
 
         $io->isVerbose()->willReturn(true)->shouldBeCalled();
         $io->writeError(Argument::type('string'))->will(function ($args) use (&$output) {
@@ -84,14 +88,14 @@ class LoggerTest extends TestCase
         $fixture = new Logger('test', $io->reveal());
         $fixture->info('foo');
 
-        $this->assertEquals(1, count($output));
-        $this->assertContains('<info>[test]</info>', $output[0]);
+        static::assertEquals(1, count($output));
+        static::assertContains('<info>[test]</info>', $output[0]);
     }
 
     /** @test */
     public function it_can_not_run_on_verbose_info()
     {
-        $io = $this->prophesize('Composer\IO\IOInterface');
+        $io = $this->prophesize(\Composer\IO\IOInterface::class);
 
         $io->isVerbose()->willReturn(false)->shouldBeCalled();
         $io->writeError(Argument::type('string'))->shouldNotBeCalled();
@@ -105,7 +109,7 @@ class LoggerTest extends TestCase
     public function it_can_run_on_warning()
     {
         $output = [];
-        $io     = $this->prophesize('Composer\IO\IOInterface');
+        $io     = $this->prophesize(\Composer\IO\IOInterface::class);
 
         $io->writeError(Argument::type('string'))->will(function ($args) use (&$output) {
             $output[] = $args[0];
@@ -116,7 +120,7 @@ class LoggerTest extends TestCase
         $fixture = new Logger('test', $io->reveal());
         $fixture->warning('foo');
 
-        $this->assertEquals(1, count($output));
-        $this->assertContains('<error>[test]</error>', $output[0]);
+        static::assertEquals(1, count($output));
+        static::assertContains('<error>[test]</error>', $output[0]);
     }
 }

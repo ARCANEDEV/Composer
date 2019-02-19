@@ -13,10 +13,11 @@ use Composer\Package\Loader\ArrayLoader;
  */
 class PackageJson
 {
-    /* ------------------------------------------------------------------------------------------------
-     |  Main Function
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Main Methods
+     | -----------------------------------------------------------------
      */
+
     /**
      * Read the contents of a composer.json style file into an array.
      *
@@ -34,7 +35,7 @@ class PackageJson
         $json = $file->read();
 
         if ( ! isset($json['name'])) {
-            $json['name'] = 'merge-plugin/' . strtr($path, DIRECTORY_SEPARATOR, '-');
+            $json['name'] = 'merge-plugin/'.strtr($path, DIRECTORY_SEPARATOR, '-');
         }
 
         if ( ! isset($json['version'])) {
@@ -65,7 +66,7 @@ class PackageJson
 
         // @codeCoverageIgnoreStart
         throw new InvalidPackageException(
-            'Expected instance of CompletePackage, got ' . get_class($package)
+            'Expected instance of CompletePackage, got '.get_class($package)
         );
         // @codeCoverageIgnoreEnd
     }

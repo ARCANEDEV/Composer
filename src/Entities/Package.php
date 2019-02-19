@@ -16,10 +16,11 @@ use Composer\Package\Version\VersionParser;
  */
 class Package
 {
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Traits
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     use PackageTraits\RepositoriesTrait,
         PackageTraits\RequiresTrait,
         PackageTraits\AutoloadTrait,
@@ -30,10 +31,11 @@ class Package
         PackageTraits\DevTrait,
         PackageTraits\ReferencesTrait;
 
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Properties
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /** @var \Composer\Composer $composer */
     protected $composer;
 
@@ -52,10 +54,11 @@ class Package
     /** @var array $json */
     protected $json;
 
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Constructor
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /**
      * Make a Package instance.
      *
@@ -73,10 +76,11 @@ class Package
         $this->versionParser = new VersionParser;
     }
 
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Getters & Setters
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /**
      * Get list of additional packages to require if precessing recursively.
      *
@@ -84,9 +88,7 @@ class Package
      */
     public function getRequires()
     {
-        return isset($this->getJson()['extra']['merge-plugin']['require'])
-            ? $this->getJson()['extra']['merge-plugin']['require']
-            : [];
+        return $this->getJson()['extra']['merge-plugin']['require'] ?? [];
     }
 
     /**
@@ -96,9 +98,7 @@ class Package
      */
     public function getIncludes()
     {
-        return isset($this->getJson()['extra']['merge-plugin']['include'])
-            ? $this->getJson()['extra']['merge-plugin']['include']
-            : [];
+        return $this->getJson()['extra']['merge-plugin']['include'] ?? [];
     }
 
     /**
@@ -134,7 +134,7 @@ class Package
     /**
      * Get the package.
      *
-     * @return \Composer\Package\CompletePackage $package
+     * @return \Composer\Package\CompletePackage
      */
     public function getPackage()
     {
@@ -198,7 +198,7 @@ class Package
         $version       = $root->getVersion();
         $prettyVersion = $root->getPrettyVersion();
         $vp            = $this->versionParser;
-        $packages      = $root->{'get' . ucfirst($linkType['method'])}();
+        $packages      = $root->{'get'.ucfirst($linkType['method'])}();
 
         return array_map(function (Link $link) use ($linkType, $version, $prettyVersion, $vp, $packages) {
             if ($link->getPrettyConstraint() !== 'self.version') {

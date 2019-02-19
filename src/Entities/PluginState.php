@@ -10,10 +10,11 @@ use Composer\Composer;
  */
 class PluginState
 {
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Properties
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /** @var \Composer\Composer */
     protected $composer;
 
@@ -93,10 +94,11 @@ class PluginState
     /** @var bool */
     protected $optimizeAutoloader = false;
 
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Constructor
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /**
      * Make PluginState instance.
      *
@@ -107,10 +109,11 @@ class PluginState
         $this->composer = $composer;
     }
 
-    /* ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
      |  Getters & Setters
-     | ------------------------------------------------------------------------------------------------
+     | -----------------------------------------------------------------
      */
+
     /**
      * Get list of filenames and/or glob patterns to include.
      *
@@ -312,7 +315,7 @@ class PluginState
      */
     public function getDuplicateLinks($type)
     {
-        return isset($this->duplicateLinks[$type]) ? $this->duplicateLinks[$type] : [];
+        return $this->duplicateLinks[$type] ?? [];
     }
 
     /**
@@ -381,7 +384,7 @@ class PluginState
     public function loadSettings()
     {
         $extra                = $this->composer->getPackage()->getExtra();
-        $config               = $this->mergeConfig($extra);
+        $config               = static::mergeConfig($extra);
         $this->includes       = is_array($config['include']) ? $config['include'] : [$config['include']];
         $this->requires       = is_array($config['require']) ? $config['require'] : [$config['require']];
         $this->recurse        = (bool) $config['recurse'];
@@ -393,10 +396,11 @@ class PluginState
         $this->mergeScripts   = (bool) $config['merge-scripts'];
     }
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Other Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Other Methods
+     | -----------------------------------------------------------------
      */
+
     /**
      * Merge config.
      *
@@ -404,22 +408,19 @@ class PluginState
      *
      * @return array
      */
-    private function mergeConfig(array $extra)
+    private static function mergeConfig(array $extra)
     {
-        return array_merge(
-            [
-                'include'              => [],
-                'require'              => [],
-                'recurse'              => true,
-                'replace'              => false,
-                'ignore-duplicates'    => false,
-                'prepend-repositories' => false,
-                'merge-dev'            => true,
-                'merge-extra'          => false,
-                'merge-extra-deep'     => false,
-                'merge-scripts'        => false,
-            ],
-            isset($extra['merge-plugin']) ? $extra['merge-plugin'] : []
-        );
+        return array_merge([
+            'include'              => [],
+            'require'              => [],
+            'recurse'              => true,
+            'replace'              => false,
+            'ignore-duplicates'    => false,
+            'prepend-repositories' => false,
+            'merge-dev'            => true,
+            'merge-extra'          => false,
+            'merge-extra-deep'     => false,
+            'merge-scripts'        => false,
+        ], $extra['merge-plugin'] ?? []);
     }
 }
