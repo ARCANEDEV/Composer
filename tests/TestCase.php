@@ -23,7 +23,7 @@ abstract class TestCase extends BaseTestCase
     /**
      * Get fixture directory
      *
-     * @param  string $directory
+     * @param  string  $directory
      *
      * @return string
      */

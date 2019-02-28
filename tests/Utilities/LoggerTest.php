@@ -25,7 +25,7 @@ class LoggerTest extends TestCase
      | -----------------------------------------------------------------
      */
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -34,17 +34,18 @@ class LoggerTest extends TestCase
         $this->io->write(Argument::type('string'))->shouldNotBeCalled();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         unset($this->io);
 
         parent::tearDown();
     }
 
-    /* ------------------------------------------------------------------------------------------------
-     |  Test Functions
-     | ------------------------------------------------------------------------------------------------
+    /* -----------------------------------------------------------------
+     |  Tests
+     | -----------------------------------------------------------------
      */
+
     /** @test */
     public function it_can_run_on_very_verbose_debug()
     {
@@ -59,7 +60,7 @@ class LoggerTest extends TestCase
         $logger->debug('foo');
 
         static::assertEquals(1, count($output));
-        static::assertContains('<info>[test]</info>', $output[0]);
+        static::assertStringContainsString('<info>[test]</info>', $output[0]);
     }
 
     /** @test */
@@ -89,7 +90,7 @@ class LoggerTest extends TestCase
         $fixture->info('foo');
 
         static::assertEquals(1, count($output));
-        static::assertContains('<info>[test]</info>', $output[0]);
+        static::assertStringContainsString('<info>[test]</info>', $output[0]);
     }
 
     /** @test */
@@ -121,6 +122,6 @@ class LoggerTest extends TestCase
         $fixture->warning('foo');
 
         static::assertEquals(1, count($output));
-        static::assertContains('<error>[test]</error>', $output[0]);
+        static::assertStringContainsString('<error>[test]</error>', $output[0]);
     }
 }
