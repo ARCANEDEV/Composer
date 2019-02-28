@@ -28,13 +28,12 @@ class StabilityFlagsTest extends TestCase
      */
     public function it_can_extract_explicit_stability($version, $expect)
     {
-        $fixture = new StabilityFlags;
-        $got     = $fixture->extractAll([
+        $actual = (new StabilityFlags)->extractAll([
             'test' => $this->makeLink($version)->reveal(),
         ]);
 
-        if (isset($got['test'])) {
-            static::assertEquals($expect, $got['test']);
+        if (isset($actual['test'])) {
+            static::assertEquals($expect, $actual['test']);
         }
     }
 
@@ -65,7 +64,6 @@ class StabilityFlagsTest extends TestCase
         ];
     }
 
-
     /** @test */
     public function it_can_extract_lowest_wins()
     {
@@ -73,11 +71,11 @@ class StabilityFlagsTest extends TestCase
             'test' => BasePackage::STABILITY_ALPHA,
         ]);
 
-        $got = $fixture->extractAll([
+        $actual = $fixture->extractAll([
             'test' => $this->makeLink('@rc')->reveal(),
         ]);
 
-        static::assertEquals(BasePackage::STABILITY_ALPHA, $got['test']);
+        static::assertEquals(BasePackage::STABILITY_ALPHA, $actual['test']);
     }
 
     /* -----------------------------------------------------------------
@@ -94,8 +92,8 @@ class StabilityFlagsTest extends TestCase
      */
     protected function makeLink($version)
     {
-        /** @var Link $link */
-        $link = $this->prophesize('Composer\Package\Link');
+        /** @var  \Composer\Package\Link  $link */
+        $link = $this->prophesize(Link::class);
         $link->getPrettyConstraint()->willReturn($version)->shouldBeCalled();
 
         return $link;

@@ -24,16 +24,16 @@ class PluginStateTest extends TestCase
      | -----------------------------------------------------------------
      */
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
         $this->pState = new PluginState(
-            $this->prophesize('Composer\Composer')->reveal()
+            $this->prophesize(\Composer\Composer::class)->reveal()
         );
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         unset($this->pState);
 
